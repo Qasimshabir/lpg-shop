@@ -38,7 +38,8 @@ class _SalesScreenState extends State<SalesScreen> {
       
       double total = 0;
       for (var sale in sales) {
-        total += (sale['totalAmount'] ?? 0).toDouble();
+        // Try both 'total' and 'totalAmount' fields
+        total += (sale['total'] ?? sale['totalAmount'] ?? 0).toDouble();
       }
       
       setState(() {

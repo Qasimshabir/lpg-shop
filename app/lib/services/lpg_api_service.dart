@@ -219,13 +219,13 @@ class LPGApiService {
         .toList();
   }
 
-  static Future<Map<String, dynamic>> getCylinderSummary() async {
+  static Future<List<dynamic>> getCylinderSummary() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/cylinder-summary'),
       headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
-    return data['data'];
+    return data['data'] as List<dynamic>;
   }
 
   static Future<List<LPGProduct>> getProductsDueForInspection({int days = 30}) async {

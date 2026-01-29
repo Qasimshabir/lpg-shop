@@ -43,9 +43,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
 
       setState(() {
         _dashboardData = {
-          'cylinderSummary': futures[0],
-          'customerAnalytics': futures[3],
-          'salesReport': futures[4],
+          'cylinderSummary': futures[0], // This is a List from aggregation
+          'customerAnalytics': futures[3], // This is a Map
+          'salesReport': futures[4], // This is a Map
         };
         _lowStockProducts = futures[1] as List<LPGProduct>;
         _customersDueForRefill = futures[2] as List<LPGCustomer>;
@@ -104,8 +104,10 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
   }
 
   Widget _buildOverviewCards() {
-    final salesData = _dashboardData['salesReport']?['overview'] ?? {};
-    final customerData = _dashboardData['customerAnalytics']?['overview'] ?? {};
+    final salesReport = _dashboardData['salesReport'] as Map<String, dynamic>? ?? {};
+    final salesData = salesReport['summary'] as Map<String, dynamic>? ?? {};
+    final customerAnalytics = _dashboardData['customerAnalytics'] as Map<String, dynamic>? ?? {};
+    final customerData = customerAnalytics['overview'] as Map<String, dynamic>? ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,7 +131,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Revenue',
-                '₹${(salesData['totalRevenue'] ?? 0).toStringAsFixed(0)}',
+                '₹${((salesData['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.currency_rupee,
                 LPGColors.success,
               ),
@@ -151,7 +153,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Avg Sale',
-                '₹${(salesData['avgSaleAmount'] ?? 0).toStringAsFixed(0)}',
+                '₹${((salesData['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.trending_up,
                 LPGColors.warning,
               ),
