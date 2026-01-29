@@ -14,7 +14,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _isLoading = true;
   Map<String, dynamic> _salesReport = {};
   Map<String, dynamic> _customerAnalytics = {};
-  Map<String, dynamic> _cylinderSummary = {};
+  List<dynamic> _cylinderSummary = [];
 
   @override
   void initState() {
@@ -33,9 +33,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ]);
       
       setState(() {
-        _salesReport = results[0];
-        _customerAnalytics = results[1];
-        _cylinderSummary = results[2];
+        _salesReport = results[0] as Map<String, dynamic>;
+        _customerAnalytics = results[1] as Map<String, dynamic>;
+        _cylinderSummary = results[2] as List<dynamic>;
         _isLoading = false;
       });
     } catch (e) {
@@ -78,10 +78,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildSalesOverview() {
-    final overview = _salesReport['overview'] ?? {};
-    final totalSales = overview['totalSales'] ?? 0;
-    final totalRevenue = (overview['totalRevenue'] ?? 0).toDouble();
-    final avgSale = (overview['avgSaleAmount'] ?? 0).toDouble();
+    final summary = _salesReport['summary'] as Map<String, dynamic>? ?? {};
+    final totalSales = summary['totalSales'] ?? 0;
+    final totalRevenue = ((summary['totalRevenue'] ?? 0) as num).toDouble();
+    final avgSale = ((summary['avgSaleValue'] ?? 0) as num).toDouble();
 
     return Card(
       child: Padding(
@@ -210,11 +210,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildCylinderDistribution() {
-    if (_cylinderSummary is! List || (_cylinderSummary as List).isEmpty) {
+    if (_cylinderSummary.isEmpty) {
       return SizedBox.shrink();
     }
-
-    final summary = _cylinderSummary as List;
 
     return Card(
       child: Padding(
@@ -224,10 +222,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             Text('Cylinder Distribution', style: LPGTextStyles.heading3),
             SizedBox(height: 16),
-            ...summary.map((item) {
-              final type = item['_id'] ?? 'Unknown';
-              final empty = item['totalEmpty'] ?? 0;
-              final filled = item['totalFilled'] ?? 0;
+            ..._cylinderSummary.map((item) {
+              final data = item as Map<String, dynamic>;
+              final type = data['_id'] ?? 'Unknown';
+              final empty = data['totalEmpty'] ?? 0;
+              final filled = data['totalFilled'] ?? 0;
               final total = empty + filled;
 
               return Padding(
