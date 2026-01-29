@@ -433,7 +433,7 @@ class ApiService {
     }
   }
 
-  static Future<Product> updateProduct(String id, Map<String, dynamic> productData) async {
+  static Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> productData) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id'),
       headers: _getHeaders(),
@@ -441,7 +441,7 @@ class ApiService {
     );
 
     final data = _handleResponse(response);
-    return Product.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
   static Future<void> deleteProduct(String id) async {
@@ -454,7 +454,7 @@ class ApiService {
   }
 
   // Customer APIs
-  static Future<List<Customer>> getCustomers({
+  static Future<List<Map<String, dynamic>>> getCustomers({
     int page = 1,
     int limit = 10,
     String? search,
@@ -470,10 +470,10 @@ class ApiService {
     final response = await http.get(uri, headers: _getHeaders());
 
     final data = _handleResponse(response);
-    return List<Customer>.from(data['data'].map((item) => Customer.fromJson(item)));
+    return List<Customer>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
-  static Future<Customer> createCustomer(Map<String, dynamic> customerData) async {
+  static Future<Map<String, dynamic>> createCustomer(Map<String, dynamic> customerData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers'),
       headers: _getHeaders(),
@@ -481,10 +481,10 @@ class ApiService {
     );
 
     final data = _handleResponse(response);
-    return Customer.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
-  static Future<Customer> updateCustomer(String id, Map<String, dynamic> customerData) async {
+  static Future<Map<String, dynamic>> updateCustomer(String id, Map<String, dynamic> customerData) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$id'),
       headers: _getHeaders(),
@@ -492,7 +492,7 @@ class ApiService {
     );
 
     final data = _handleResponse(response);
-    return Customer.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
   static Future<void> deleteCustomer(String id) async {
@@ -505,7 +505,7 @@ class ApiService {
   }
 
   // Sales APIs with improved error handling and validation
-  static Future<Sale> createSale(Map<String, dynamic> saleData) async {
+  static Future<Map<String, dynamic>> createSale(Map<String, dynamic> saleData) async {
     // Validate sale data before sending
     _validateSaleData(saleData);
     
@@ -518,7 +518,7 @@ class ApiService {
     );
 
     final data = _handleResponse(response);
-    return Sale.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
   
   static void _validateSaleData(Map<String, dynamic> saleData) {
@@ -541,7 +541,7 @@ class ApiService {
     }
   }
 
-  static Future<List<Sale>> getSales({
+  static Future<List<Map<String, dynamic>>> getSales({
     int page = 1,
     int limit = 10,
     String? status,
@@ -563,7 +563,7 @@ class ApiService {
     final response = await http.get(uri, headers: _getHeaders());
 
     final data = _handleResponse(response);
-    return List<Sale>.from(data['data'].map((item) => Sale.fromJson(item)));
+    return List<Sale>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   static Future<Map<String, dynamic>> getSalesReport({
@@ -583,44 +583,44 @@ class ApiService {
   }
 
   // Enhanced Customer APIs
-  static Future<Customer> addVehicleToCustomer(String customerId, Map<String, dynamic> vehicleData) async {
+  static Future<Map<String, dynamic>> addVehicleToCustomer(String customerId, Map<String, dynamic> vehicleData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers/$customerId/vehicles'),
       headers: _getHeaders(),
       body: json.encode(vehicleData),
     );
     final data = _handleResponse(response);
-    return Customer.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
-  static Future<Customer> updateVehicle(String customerId, String vehicleId, Map<String, dynamic> vehicleData) async {
+  static Future<Map<String, dynamic>> updateVehicle(String customerId, String vehicleId, Map<String, dynamic> vehicleData) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$customerId/vehicles/$vehicleId'),
       headers: _getHeaders(),
       body: json.encode(vehicleData),
     );
     final data = _handleResponse(response);
-    return Customer.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
-  static Future<Customer> addOilChangeHistory(String customerId, Map<String, dynamic> oilChangeData) async {
+  static Future<Map<String, dynamic>> addOilChangeHistory(String customerId, Map<String, dynamic> oilChangeData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers/$customerId/oil-change'),
       headers: _getHeaders(),
       body: json.encode(oilChangeData),
     );
     final data = _handleResponse(response);
-    return Customer.fromJson(data['data']);
+    return data['data'] as Map<String, dynamic>;
   }
 
 
-  static Future<List<Customer>> getTopCustomers({int limit = 10}) async {
+  static Future<List<Map<String, dynamic>>> getTopCustomers({int limit = 10}) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/top-customers?limit=$limit'),
       headers: _getHeaders(),
     );
     final data = _handleResponse(response);
-    return List<Customer>.from(data['data'].map((item) => Customer.fromJson(item)));
+    return List<Customer>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   // Feedback APIs
@@ -742,13 +742,13 @@ class ApiService {
   }
 
   // Enhanced Product APIs
-  static Future<List<Product>> getLowStockProducts() async {
+  static Future<List<Map<String, dynamic>>> getLowStockProducts() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/lowstock'),
       headers: _getHeaders(),
     );
     final data = _handleResponse(response);
-    return List<Product>.from(data['data'].map((item) => Product.fromJson(item)));
+    return List<Product>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   // Enhanced Analytics APIs (Phase 3)
@@ -819,3 +819,4 @@ class ApiService {
   }
 
 }
+
