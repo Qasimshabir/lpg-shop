@@ -432,7 +432,7 @@ class LPGApiService {
 
   // --- LPG Sales APIs ---
 
-  static Future<Map<String, dynamic>> createLPGSale(Map<String, dynamic>> saleData) async {
+  static Future<Map<String, dynamic>> createLPGSale(Map<String, dynamic> saleData) async {
     final url = '$_baseUrl/sales';
     AppLogger.apiRequest('POST', url, saleData);
     

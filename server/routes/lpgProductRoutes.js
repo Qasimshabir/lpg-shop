@@ -19,6 +19,12 @@ const router = express.Router();
 // All routes are protected
 router.use(protect);
 
+// Specific routes MUST come before parameterized routes
+router.get('/low-stock', getLowStockProducts);
+router.get('/cylinder-summary', getCylinderSummary);
+router.get('/inspection-due', getProductsDueForInspection);
+router.get('/category/:category', getProductsByCategory);
+
 // Product CRUD routes
 router.route('/')
   .get(getLPGProducts)
@@ -32,11 +38,5 @@ router.route('/:id')
 // Cylinder-specific routes
 router.put('/:id/cylinder-state', updateCylinderState);
 router.put('/:id/exchange', exchangeCylinder);
-
-// Inventory management routes
-router.get('/low-stock', getLowStockProducts);
-router.get('/category/:category', getProductsByCategory);
-router.get('/cylinder-summary', getCylinderSummary);
-router.get('/inspection-due', getProductsDueForInspection);
 
 module.exports = router;

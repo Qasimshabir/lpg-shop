@@ -6,9 +6,6 @@ const Cylinder = require('../models/Cylinder');
 const SafetyChecklist = require('../models/SafetyChecklist');
 
 const createLPGSale = async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  
   try {
     const { items, customer, deliveryRequired, deliveryAddress, paymentMethod, taxRate, discount, discountType, notes, saleType } = req.body;
     
@@ -24,7 +21,7 @@ const createLPGSale = async (req, res, next) => {
       const product = await LPGProduct.findOne({ 
         _id: item.product, 
         userId: req.user.id 
-      }).session(session);
+      });
       
       if (!product) {
         throw new Error(`Product not found: ${item.product}`);
@@ -54,9 +51,7 @@ const createLPGSale = async (req, res, next) => {
           capacity: product.cylinderType,
           status: 'in-stock',
           isActive: true
-        })
-          .limit(item.quantity)
-          .session(session);
+        }).limit(item.quantity);
         
         if (availableCylinders.length < item.quantity) {
           throw new Error(
@@ -81,13 +76,12 @@ const createLPGSale = async (req, res, next) => {
               type: 'customer',
               customerId: customer
             }
-          },
-          { session }
+          }
         );
         
         product.cylinderStates.filled -= item.quantity;
         product.cylinderStates.sold += item.quantity;
-        await product.save({ session });
+        await product.save();
       } else {
         if (product.stock < item.quantity) {
           throw new Error(
@@ -97,11 +91,11 @@ const createLPGSale = async (req, res, next) => {
         }
         
         product.stock -= item.quantity;
-        await product.save({ session });
+        await product.save();
       }
     }
     
-    const sale = await LPGSale.create([{
+    const sale = await LPGSale.create({
       soldBy: req.user.id,
       customer: customer || null,
       customerType: customer ? 'registered' : 'walk-in',
@@ -116,7 +110,7 @@ const createLPGSale = async (req, res, next) => {
       saleType: saleType || 'New Sale',
       notes: notes || '',
       status: 'Completed'
-    }], { session });
+    });
     
     if (customer) {
       await LPGCustomer.findByIdAndUpdate(
@@ -124,29 +118,26 @@ const createLPGSale = async (req, res, next) => {
         {
           $inc: {
             totalRefills: 1,
-            totalSpent: sale[0].total,
-            loyaltyPoints: Math.floor(sale[0].total / 100)
+            totalSpent: sale.total,
+            loyaltyPoints: Math.floor(sale.total / 100)
           },
           lastRefillDate: new Date()
-        },
-        { session }
+        }
       );
       
       if (saleType === 'New Connection') {
-        await SafetyChecklist.create([{
+        await SafetyChecklist.create({
           userId: req.user.id,
-          saleId: sale[0]._id,
+          saleId: sale._id,
           customerId: customer,
           checklistType: 'new-connection',
           items: SafetyChecklist.getTemplate('new-connection')
-        }], { session });
+        });
       }
     }
     
-    await session.commitTransaction();
-    
     // Populate the sale before returning
-    const populatedSale = await LPGSale.findById(sale[0]._id)
+    const populatedSale = await LPGSale.findById(sale._id)
       .populate('customer', 'name phone email')
       .populate('items.product', 'name brand category');
     
@@ -157,7 +148,6 @@ const createLPGSale = async (req, res, next) => {
     });
     
   } catch (error) {
-    await session.abortTransaction();
     console.error('Sale creation error:', error);
     
     // Log detailed error for debugging
@@ -174,8 +164,6 @@ const createLPGSale = async (req, res, next) => {
       success: false,
       message: error.message || 'Failed to create sale'
     });
-  } finally {
-    session.endSession();
   }
 };
 
@@ -214,7 +202,7 @@ const getSalesReport = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
-    const matchStage = { userId: new mongoose.Types.ObjectId(req.user.id) };
+    const matchStage = { soldBy: new mongoose.Types.ObjectId(req.user.id) };
     
     if (startDate || endDate) {
       matchStage.createdAt = {};
@@ -228,10 +216,10 @@ const getSalesReport = async (req, res, next) => {
         $group: {
           _id: null,
           totalSales: { $sum: 1 },
-          totalRevenue: { $sum: '$totalAmount' },
+          totalRevenue: { $sum: '$total' },
           totalPaid: { $sum: '$paidAmount' },
-          totalBalance: { $sum: '$balanceAmount' },
-          avgSaleValue: { $avg: '$totalAmount' }
+          totalBalance: { $sum: '$remainingAmount' },
+          avgSaleValue: { $avg: '$total' }
         }
       }
     ]);
@@ -242,7 +230,7 @@ const getSalesReport = async (req, res, next) => {
         $group: {
           _id: '$paymentMethod',
           count: { $sum: 1 },
-          total: { $sum: '$totalAmount' }
+          total: { $sum: '$total' }
         }
       }
     ]);
@@ -253,7 +241,7 @@ const getSalesReport = async (req, res, next) => {
         $group: {
           _id: '$paymentStatus',
           count: { $sum: 1 },
-          total: { $sum: '$totalAmount' }
+          total: { $sum: '$total' }
         }
       }
     ]);

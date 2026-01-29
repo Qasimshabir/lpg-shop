@@ -23,6 +23,11 @@ const router = express.Router();
 // All routes are protected
 router.use(protect);
 
+// Specific routes MUST come before parameterized routes
+router.get('/due-refill', getCustomersDueForRefill);
+router.get('/top-customers', getTopCustomers);
+router.get('/analytics', getCustomerAnalytics);
+
 // Customer CRUD routes
 router.route('/')
   .get(getLPGCustomers)
@@ -45,10 +50,7 @@ router.get('/:id/refill-history', getRefillHistory);
 // Credit management
 router.put('/:id/credit', updateCredit);
 
-// Analytics and reports
-router.get('/due-refill', getCustomersDueForRefill);
-router.get('/top-customers', getTopCustomers);
-router.get('/analytics', getCustomerAnalytics);
+// Customer-specific analytics
 router.get('/:id/consumption-pattern', getConsumptionPattern);
 
 module.exports = router;
