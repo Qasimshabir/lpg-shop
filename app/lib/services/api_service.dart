@@ -470,7 +470,7 @@ class ApiService {
     final response = await http.get(uri, headers: _getHeaders());
 
     final data = _handleResponse(response);
-    return List<Customer>.from(data['data'].map((item) => item as Map<String, dynamic>));
+    return List<Map<String, dynamic>>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   static Future<Map<String, dynamic>> createCustomer(Map<String, dynamic> customerData) async {
@@ -563,7 +563,7 @@ class ApiService {
     final response = await http.get(uri, headers: _getHeaders());
 
     final data = _handleResponse(response);
-    return List<Sale>.from(data['data'].map((item) => item as Map<String, dynamic>));
+    return List<Map<String, dynamic>>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   static Future<Map<String, dynamic>> getSalesReport({
@@ -620,7 +620,7 @@ class ApiService {
       headers: _getHeaders(),
     );
     final data = _handleResponse(response);
-    return List<Customer>.from(data['data'].map((item) => item as Map<String, dynamic>));
+    return List<Map<String, dynamic>>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   // Feedback APIs
@@ -748,7 +748,7 @@ class ApiService {
       headers: _getHeaders(),
     );
     final data = _handleResponse(response);
-    return List<Product>.from(data['data'].map((item) => item as Map<String, dynamic>));
+    return List<Map<String, dynamic>>.from(data['data'].map((item) => item as Map<String, dynamic>));
   }
 
   // Enhanced Analytics APIs (Phase 3)
@@ -819,4 +819,5 @@ class ApiService {
   }
 
 }
+
 
