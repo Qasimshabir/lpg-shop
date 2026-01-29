@@ -13,5 +13,6 @@ class ApiConfig {
     }
   }
 
-  static String get lpgBaseUrl => '$baseUrl/lpg';
+  // LPG routes are directly under /api, not /api/lpg
+  static String get lpgBaseUrl => baseUrl;
 }

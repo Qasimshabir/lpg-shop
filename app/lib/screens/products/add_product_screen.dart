@@ -349,7 +349,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixText: '₹ ',
                 ),
                 keyboardType: TextInputType.number,
-                initialValue: '0',
               ),
               SizedBox(height: 16),
               TextFormField(
@@ -359,7 +358,6 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixText: '₹ ',
                 ),
                 keyboardType: TextInputType.number,
-                initialValue: '0',
               ),
             ],
           ],
