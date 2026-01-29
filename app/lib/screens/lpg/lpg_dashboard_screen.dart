@@ -3,6 +3,11 @@ import '../../services/lpg_api_service.dart';
 import '../../models/lpg_product.dart';
 import '../../models/lpg_customer.dart';
 import '../../lpg_theme.dart';
+import '../../widgets/app_drawer.dart';
+import '../products/products_screen.dart';
+import '../customers/customers_screen.dart';
+import '../sales/sales_screen.dart';
+import '../reports/reports_screen.dart';
 
 class LPGDashboardScreen extends StatefulWidget {
   const LPGDashboardScreen({Key? key}) : super(key: key);
@@ -72,6 +77,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
           ),
         ],
       ),
+      drawer: AppDrawer(currentRoute: '/dashboard'),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -210,7 +216,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             ),
           )
         else
-          ...cylinderData.map((data) => _buildCylinderCard(data)).toList(),
+          ...cylinderData.map((data) => _buildCylinderCard(data)),
       ],
     );
   }
@@ -343,7 +349,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
                       ),
                     ],
                   ),
-                )).toList(),
+                )),
                 if (_lowStockProducts.length > 3)
                   Text(
                     'and ${_lowStockProducts.length - 3} more...',
@@ -402,7 +408,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
                       ),
                     ],
                   ),
-                )).toList(),
+                )),
                 if (_customersDueForRefill.length > 3)
                   Text(
                     'and ${_customersDueForRefill.length - 3} more...',
@@ -438,9 +444,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
               Icons.add_shopping_cart,
               LPGColors.primary,
               () {
-                // Navigate to new sale screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('New Sale - Coming Soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SalesScreen()),
                 );
               },
             ),
@@ -449,9 +455,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
               Icons.add_box,
               LPGColors.secondary,
               () {
-                // Navigate to add product screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Add Product - Coming Soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProductsScreen()),
                 );
               },
             ),
@@ -460,9 +466,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
               Icons.people_alt,
               LPGColors.success,
               () {
-                // Navigate to customers screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Manage Customers - Coming Soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CustomersScreen()),
                 );
               },
             ),
@@ -471,9 +477,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
               Icons.analytics,
               LPGColors.info,
               () {
-                // Navigate to reports screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('View Reports - Coming Soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ReportsScreen()),
                 );
               },
             ),
