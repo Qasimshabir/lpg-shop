@@ -324,7 +324,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                                     Icon(Icons.email, size: 16, color: Colors.grey[600]),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'support@engineoilshop.com',
+                                      'support@lpgdealershop.com',
                                       style: TextStyle(
                                         color: Colors.grey[600],
                                         fontSize: 12,

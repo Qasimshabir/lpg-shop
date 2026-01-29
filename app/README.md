@@ -1,6 +1,16 @@
-# app
+# LPG Dealer Management System
 
-A new Flutter project.
+A comprehensive Flutter application for managing LPG dealer operations including cylinder inventory, accessories, sales, and delivery management.
+
+## Features
+
+- **Cylinder Management**: Track LPG cylinders, their status, and location
+- **Accessories Management**: Manage regulators, hoses, and other LPG accessories
+- **Sales Management**: Record and track sales transactions
+- **Customer Management**: Maintain customer database and refill history
+- **Delivery Management**: Assign and track deliveries
+- **Safety Compliance**: Safety checklists and incident reporting
+- **Reports & Analytics**: Sales reports and business insights
 
 ## Getting Started
 

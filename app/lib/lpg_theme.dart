@@ -114,7 +114,7 @@ ThemeData lpgTheme() {
       ),
     ),
     
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: Colors.white,
       shadowColor: Colors.black.withOpacity(0.1),
       elevation: 2,
@@ -213,7 +213,7 @@ ThemeData lpgTheme() {
       ),
     ),
     
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
