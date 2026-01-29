@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lpg_product.dart';
 import '../models/lpg_customer.dart';
+import '../config/api_config.dart';
 
 class LPGApiException implements Exception {
   final String message;
@@ -20,7 +21,7 @@ class LPGApiException implements Exception {
 }
 
 class LPGApiService {
-  static const String _baseUrl = 'http://10.141.19.97:5000/api/lpg';
+  static String get _baseUrl => ApiConfig.lpgBaseUrl;
   static String? _token;
 
   // Initialize token from storage

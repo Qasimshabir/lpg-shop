@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/feedback.dart';
+import '../config/api_config.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -21,7 +22,7 @@ class ApiException implements Exception {
 }
 
 class ApiService {
-  static const String _baseUrl = 'http://10.141.196.72:5000/api';
+  static String get _baseUrl => ApiConfig.baseUrl;
   static String? _token;
 
   // Build a public URL for static assets (e.g., /uploads/...)
