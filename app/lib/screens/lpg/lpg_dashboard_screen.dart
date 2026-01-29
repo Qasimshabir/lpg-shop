@@ -4,6 +4,7 @@ import '../../models/lpg_product.dart';
 import '../../models/lpg_customer.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
+import '../../utils/logger.dart';
 import '../products/products_screen.dart';
 import '../customers/customers_screen.dart';
 import '../sales/sales_screen.dart';
@@ -41,6 +42,11 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
         LPGApiService.getSalesReport(),
       ]);
 
+      AppLogger.debug('Cylinder Summary Type: ${futures[0].runtimeType}');
+      AppLogger.debug('Customer Analytics Type: ${futures[3].runtimeType}');
+      AppLogger.debug('Sales Report Type: ${futures[4].runtimeType}');
+      AppLogger.debug('Sales Report Data: ${futures[4]}');
+
       setState(() {
         _dashboardData = {
           'cylinderSummary': futures[0], // This is a List from aggregation
@@ -51,7 +57,8 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
         _customersDueForRefill = futures[2] as List<LPGCustomer>;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to load dashboard data', e, stackTrace);
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

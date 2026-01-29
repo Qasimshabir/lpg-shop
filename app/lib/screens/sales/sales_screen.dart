@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
+import '../../utils/logger.dart';
 import 'package:intl/intl.dart';
 import 'create_sale_screen.dart';
 import 'sale_detail_screen.dart';
@@ -36,18 +37,24 @@ class _SalesScreenState extends State<SalesScreen> {
         endDate: _endDate?.toIso8601String(),
       );
       
+      AppLogger.debug('Loaded ${sales.length} sales');
+      
       double total = 0;
       for (var sale in sales) {
-        // Try both 'total' and 'totalAmount' fields
-        total += (sale['total'] ?? sale['totalAmount'] ?? 0).toDouble();
+        final saleTotal = (sale['total'] ?? sale['totalAmount'] ?? 0);
+        AppLogger.debug('Sale ${sale['_id']}: total=$saleTotal, keys=${sale.keys.toList()}');
+        total += (saleTotal as num).toDouble();
       }
+      
+      AppLogger.info('Total revenue calculated: $total');
       
       setState(() {
         _sales = sales;
         _totalRevenue = total;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to load sales', e, stackTrace);
       setState(() => _isLoading = false);
       _showError('Failed to load sales: $e');
     }
