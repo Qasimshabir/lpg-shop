@@ -105,9 +105,9 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
 
   Widget _buildOverviewCards() {
     final salesReport = _dashboardData['salesReport'] as Map<String, dynamic>? ?? {};
-    final salesData = salesReport['summary'] as Map<String, dynamic>? ?? {};
+    final salesSummary = salesReport['summary'] as Map<String, dynamic>? ?? {};
     final customerAnalytics = _dashboardData['customerAnalytics'] as Map<String, dynamic>? ?? {};
-    final customerData = customerAnalytics['overview'] as Map<String, dynamic>? ?? {};
+    final customerOverview = customerAnalytics['overview'] as Map<String, dynamic>? ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +122,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Total Sales',
-                '${salesData['totalSales'] ?? 0}',
+                '${salesSummary['totalSales'] ?? 0}',
                 Icons.shopping_cart,
                 LPGColors.primary,
               ),
@@ -131,7 +131,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Revenue',
-                '₹${((salesData['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
+                '₹${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.currency_rupee,
                 LPGColors.success,
               ),
@@ -144,7 +144,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Customers',
-                '${customerData['totalCustomers'] ?? 0}',
+                '${customerOverview['totalCustomers'] ?? 0}',
                 Icons.people,
                 LPGColors.info,
               ),
@@ -153,7 +153,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Avg Sale',
-                '₹${((salesData['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
+                '₹${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.trending_up,
                 LPGColors.warning,
               ),
