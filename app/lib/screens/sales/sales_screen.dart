@@ -4,6 +4,7 @@ import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
 import 'package:intl/intl.dart';
 import 'create_sale_screen.dart';
+import 'sale_detail_screen.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({Key? key}) : super(key: key);
@@ -169,14 +170,21 @@ class _SalesScreenState extends State<SalesScreen> {
 
   Widget _buildSaleCard(Map<String, dynamic> sale) {
     final date = DateTime.parse(sale['createdAt'] ?? DateTime.now().toIso8601String());
-    final amount = (sale['totalAmount'] ?? 0).toDouble();
+    final amount = (sale['total'] ?? sale['totalAmount'] ?? 0).toDouble();
     final items = sale['items'] as List? ?? [];
     final customerName = sale['customer']?['name'] ?? 'Walk-in Customer';
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => _showComingSoon('Sale Details'),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => SaleDetailScreen(sale: sale),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: EdgeInsets.all(16),

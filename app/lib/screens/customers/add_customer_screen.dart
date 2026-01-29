@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
+import '../../models/lpg_customer.dart';
 import '../../lpg_theme.dart';
 
 class AddCustomerScreen extends StatefulWidget {
-  const AddCustomerScreen({Key? key}) : super(key: key);
+  final LPGCustomer? customer;
+  
+  const AddCustomerScreen({Key? key, this.customer}) : super(key: key);
 
   @override
   State<AddCustomerScreen> createState() => _AddCustomerScreenState();
@@ -32,6 +35,39 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   String _customerType = 'Individual';
   String _premisesType = 'Residential';
   String _cylinderCapacity = '11.8kg';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.customer != null) {
+      _loadCustomerData();
+    }
+  }
+
+  void _loadCustomerData() {
+    final customer = widget.customer!;
+    _nameController.text = customer.name;
+    _emailController.text = customer.email ?? '';
+    _phoneController.text = customer.phone;
+    _alternatePhoneController.text = customer.alternatePhone ?? '';
+    _businessNameController.text = customer.businessName ?? '';
+    _gstNumberController.text = customer.gstNumber ?? '';
+    _creditLimitController.text = customer.creditLimit.toString();
+    _customerType = customer.customerType;
+    
+    // Load first premises if available
+    if (customer.premises.isNotEmpty) {
+      final premises = customer.premises[0];
+      _premisesNameController.text = premises.name ?? '';
+      _premisesType = premises.type;
+      _streetController.text = premises.address.street;
+      _cityController.text = premises.address.city;
+      _stateController.text = premises.address.state;
+      _pincodeController.text = premises.address.pincode;
+      _landmarkController.text = premises.address.landmark ?? '';
+      _cylinderCapacity = premises.cylinderCapacity;
+    }
+  }
 
   @override
   void dispose() {
@@ -64,7 +100,17 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         'alternatePhone': _alternatePhoneController.text.trim().isEmpty ? null : _alternatePhoneController.text.trim(),
         'customerType': _customerType,
         'creditLimit': double.parse(_creditLimitController.text),
-        'premises': [
+        'preferredCylinderCapacity': _cylinderCapacity,
+      };
+
+      if (_customerType == 'Business') {
+        customerData['businessName'] = _businessNameController.text.trim();
+        customerData['gstNumber'] = _gstNumberController.text.trim().isEmpty ? null : _gstNumberController.text.trim();
+      }
+
+      // Only add premises if creating new customer
+      if (widget.customer == null) {
+        customerData['premises'] = [
           {
             'name': _premisesNameController.text.trim(),
             'type': _premisesType,
@@ -78,26 +124,34 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             'cylinderCapacity': _cylinderCapacity,
             'isPrimary': true,
           }
-        ],
-      };
-
-      if (_customerType == 'Business') {
-        customerData['businessName'] = _businessNameController.text.trim();
-        customerData['gstNumber'] = _gstNumberController.text.trim().isEmpty ? null : _gstNumberController.text.trim();
+        ];
       }
 
-      await LPGApiService.createLPGCustomer(customerData);
+      if (widget.customer != null) {
+        // Update existing customer
+        await LPGApiService.updateLPGCustomer(widget.customer!.id, customerData);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Customer updated successfully!'), backgroundColor: LPGColors.success),
+          );
+        }
+      } else {
+        // Create new customer
+        await LPGApiService.createLPGCustomer(customerData);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Customer added successfully!'), backgroundColor: LPGColors.success),
+          );
+        }
+      }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Customer added successfully!'), backgroundColor: LPGColors.success),
-        );
         Navigator.pop(context, true);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add customer: $e'), backgroundColor: LPGColors.error),
+          SnackBar(content: Text('Failed to save customer: $e'), backgroundColor: LPGColors.error),
         );
       }
     } finally {
@@ -107,8 +161,10 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.customer != null;
+    
     return Scaffold(
-      appBar: AppBar(title: Text('Add New Customer')),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Customer' : 'Add New Customer')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -328,12 +384,15 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
   }
 
   Widget _buildSaveButton() {
+    final isEditing = widget.customer != null;
     return SizedBox(
       width: double.infinity,
       height: 50,
       child: ElevatedButton(
         onPressed: _isLoading ? null : _saveCustomer,
-        child: _isLoading ? CircularProgressIndicator(color: Colors.white) : Text('Add Customer'),
+        child: _isLoading 
+          ? CircularProgressIndicator(color: Colors.white) 
+          : Text(isEditing ? 'Update Customer' : 'Add Customer'),
       ),
     );
   }

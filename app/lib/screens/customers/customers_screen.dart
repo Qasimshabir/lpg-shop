@@ -194,6 +194,37 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     ),
                   ),
                   _buildLoyaltyBadge(customer.loyaltyTier),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') {
+                        _editCustomer(customer);
+                      } else if (value == 'delete') {
+                        _confirmDelete(customer);
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 20, color: LPGColors.primary),
+                            SizedBox(width: 8),
+                            Text('Edit'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 20, color: LPGColors.error),
+                            SizedBox(width: 8),
+                            Text('Delete'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
               SizedBox(height: 12),
@@ -232,6 +263,55 @@ class _CustomersScreenState extends State<CustomersScreen> {
         ),
       ),
     );
+  }
+
+  void _editCustomer(LPGCustomer customer) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddCustomerScreen(customer: customer),
+      ),
+    );
+    if (result == true) _loadCustomers();
+  }
+
+  void _confirmDelete(LPGCustomer customer) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete Customer'),
+        content: Text('Are you sure you want to delete ${customer.displayName}? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteCustomer(customer);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: LPGColors.error),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCustomer(LPGCustomer customer) async {
+    try {
+      await LPGApiService.deleteLPGCustomer(customer.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Customer deleted successfully'),
+          backgroundColor: LPGColors.success,
+        ),
+      );
+      _loadCustomers();
+    } catch (e) {
+      _showError('Failed to delete customer: $e');
+    }
   }
 
   Widget _buildLoyaltyBadge(String tier) {
