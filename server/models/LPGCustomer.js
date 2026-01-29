@@ -436,8 +436,12 @@ lpgCustomerSchema.statics.getCustomersDueForRefill = function(userId, daysAhead 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
   
+  const userObjectId = mongoose.Types.ObjectId.isValid(userId)
+    ? new mongoose.Types.ObjectId(userId)
+    : userId;
+  
   return this.aggregate([
-    { $match: { userId: mongoose.Types.ObjectId(userId), isActive: true } },
+    { $match: { userId: userObjectId, isActive: true } },
     {
       $addFields: {
         lastRefillDate: {

@@ -202,7 +202,12 @@ const getSalesReport = async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query;
     
-    const matchStage = { soldBy: new mongoose.Types.ObjectId(req.user.id) };
+    // Convert string ID to ObjectId for aggregation
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id)
+      : req.user._id;
+    
+    const matchStage = { soldBy: userId };
     
     if (startDate || endDate) {
       matchStage.createdAt = {};
@@ -261,6 +266,7 @@ const getSalesReport = async (req, res, next) => {
       }
     });
   } catch (error) {
+    console.error('Sales report error:', error);
     next(error);
   }
 };

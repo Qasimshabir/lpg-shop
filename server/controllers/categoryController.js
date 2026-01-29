@@ -35,10 +35,12 @@ const getCategories = async (req, res, next) => {
 // @access  Private
 const getCategoriesWithStats = async (req, res, next) => {
   try {
-    const userId = req.user.id;
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id)
+      ? new mongoose.Types.ObjectId(req.user.id)
+      : req.user._id;
     
     const categoryStats = await LPGProduct.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId), isActive: true } },
+      { $match: { userId: userId, isActive: true } },
       {
         $group: {
           _id: '$category',
@@ -57,6 +59,7 @@ const getCategoriesWithStats = async (req, res, next) => {
       data: categoryStats
     });
   } catch (error) {
+    console.error('Category stats error:', error);
     next(error);
   }
 };
