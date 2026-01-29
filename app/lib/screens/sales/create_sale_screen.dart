@@ -84,19 +84,16 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
         'customer': _selectedCustomer?.id,
         'items': _cartItems.map((item) => {
           'product': item['product'],
-          'productName': item['productName'],
           'quantity': item['quantity'],
           'unitPrice': item['unitPrice'],
-          'subtotal': item['subtotal'],
         }).toList(),
-        'subtotal': _subtotal,
-        'discount': _discount,
-        'totalAmount': _total,
         'paymentMethod': _paymentMethod,
-        'paymentStatus': _paymentMethod == 'Credit' ? 'pending' : 'paid',
-        'status': 'completed',
+        'discount': _discount,
+        'discountType': 'fixed',
       };
 
+      print('Creating sale with data: $saleData');
+      
       await LPGApiService.createLPGSale(saleData);
 
       if (mounted) {
@@ -106,6 +103,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
         Navigator.pop(context, true);
       }
     } catch (e) {
+      print('Sale creation error: $e');
       setState(() => _isLoading = false);
       _showError('Failed to create sale: $e');
     }

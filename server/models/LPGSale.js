@@ -21,11 +21,6 @@ const saleItemSchema = new mongoose.Schema({
     trim: true,
     uppercase: true
   }],
-  cylinderSerialNumbers: [{
-    type: String,
-    trim: true,
-    uppercase: true
-  }],
   isRefill: {
     type: Boolean,
     default: false

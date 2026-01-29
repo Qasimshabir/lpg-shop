@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../models/feedback.dart';
 import '../config/api_config.dart';
+import '../utils/logger.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -73,37 +74,22 @@ class ApiService {
 
   // Handle API responses with improved error handling
   static Map<String, dynamic> _handleResponse(http.Response response) {
-    if (kDebugMode) {
-      debugPrint('=== HANDLE RESPONSE DEBUG ===');
-      debugPrint('Status Code: ${response.statusCode}');
-      debugPrint('Response Body: ${response.body}');
-    }
+    AppLogger.debug('Response Status: ${response.statusCode}');
+    AppLogger.debug('Response Body: ${response.body}');
     
     try {
       final data = json.decode(response.body);
-      if (kDebugMode) {
-        debugPrint('Decoded data: $data');
-      }
       
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        if (kDebugMode) {
-          debugPrint('Success response');
-        }
+        AppLogger.info('API call successful');
         return data;
       } else {
-        if (kDebugMode) {
-          debugPrint('Error response');
-        }
         String errorMessage = _getErrorMessage(response.statusCode, data);
-        if (kDebugMode) {
-          debugPrint('Error message: $errorMessage');
-        }
+        AppLogger.error('API error: $errorMessage', 'Status: ${response.statusCode}');
         throw ApiException(errorMessage, response.statusCode);
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Error decoding response: $e');
-      }
+      AppLogger.error('Error decoding response', e);
       if (e is ApiException) {
         rethrow;
       } else if (e is FormatException) {

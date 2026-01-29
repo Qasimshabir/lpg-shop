@@ -234,12 +234,6 @@ class _SalesScreenState extends State<SalesScreen> {
           Text('No sales found', style: LPGTextStyles.heading3),
           SizedBox(height: 8),
           Text('Create your first sale to get started', style: LPGTextStyles.body2),
-          SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _showComingSoon('Create Sale'),
-            icon: Icon(Icons.add),
-            label: Text('New Sale'),
-          ),
         ],
       ),
     );

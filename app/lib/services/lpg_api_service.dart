@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/lpg_product.dart';
 import '../models/lpg_customer.dart';
 import '../config/api_config.dart';
+import '../utils/logger.dart';
 
 class LPGApiException implements Exception {
   final String message;
@@ -45,16 +46,27 @@ class LPGApiService {
 
   // Handle HTTP response
   static dynamic _handleResponse(http.Response response) {
+    AppLogger.debug('Response Status: ${response.statusCode}');
+    AppLogger.debug('Response Body: ${response.body}');
+    
     if (response.statusCode >= 200 && response.statusCode < 300) {
+      AppLogger.info('Request successful');
       return json.decode(response.body);
     } else {
       String message = 'Request failed';
       try {
         final errorData = json.decode(response.body);
         message = errorData['message'] ?? message;
+        
+        // Log detailed error information
+        if (errorData['errors'] != null) {
+          AppLogger.error('Validation errors', errorData['errors']);
+        }
       } catch (e) {
-        // Use default message if JSON parsing fails
+        AppLogger.warning('Failed to parse error response', e);
       }
+      
+      AppLogger.error('API request failed', 'Status: ${response.statusCode}, Message: $message');
       throw LPGApiException(message, response.statusCode);
     }
   }
@@ -420,14 +432,26 @@ class LPGApiService {
 
   // --- LPG Sales APIs ---
 
-  static Future<Map<String, dynamic>> createLPGSale(Map<String, dynamic> saleData) async {
-    final response = await http.post(
-      Uri.parse('$_baseUrl/sales'),
-      headers: await _getHeaders(),
-      body: json.encode(saleData),
-    );
-    final data = _handleResponse(response);
-    return data['data'];
+  static Future<Map<String, dynamic>> createLPGSale(Map<String, dynamic>> saleData) async {
+    final url = '$_baseUrl/sales';
+    AppLogger.apiRequest('POST', url, saleData);
+    
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: await _getHeaders(),
+        body: json.encode(saleData),
+      );
+      
+      AppLogger.apiResponse('POST', url, response.statusCode, response.body);
+      
+      final data = _handleResponse(response);
+      AppLogger.info('Sale created successfully', data['data']);
+      return data['data'];
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to create sale', e, stackTrace);
+      rethrow;
+    }
   }
 
   static Future<List<Map<String, dynamic>>> getLPGSales({
