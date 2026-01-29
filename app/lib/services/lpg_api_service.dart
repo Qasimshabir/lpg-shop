@@ -22,22 +22,22 @@ class LPGApiException implements Exception {
 
 class LPGApiService {
   static String get _baseUrl => ApiConfig.lpgBaseUrl;
-  static String? _token;
-
-  // Initialize token from storage
-  static Future<void> init() async {
+  
+  // Get token from SharedPreferences directly (shared with ApiService)
+  static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    _token = prefs.getString('auth_token');
+    return prefs.getString('auth_token');
   }
 
   // Get headers with auth token
-  static Map<String, String> _getHeaders() {
+  static Future<Map<String, String>> _getHeaders() async {
     final headers = {
       'Content-Type': 'application/json',
     };
     
-    if (_token != null) {
-      headers['Authorization'] = 'Bearer $_token';
+    final token = await _getToken();
+    if (token != null) {
+      headers['Authorization'] = 'Bearer $token';
     }
     
     return headers;
@@ -102,7 +102,7 @@ class LPGApiService {
 
     final uri = Uri.parse('$_baseUrl/products').replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return (data['data'] as List)
@@ -113,7 +113,7 @@ class LPGApiService {
   static Future<LPGProduct> getLPGProduct(String id) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return LPGProduct.fromJson(data['data']);
@@ -122,7 +122,7 @@ class LPGApiService {
   static Future<LPGProduct> createLPGProduct(Map<String, dynamic> productData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/products'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(productData),
     );
     final data = _handleResponse(response);
@@ -132,7 +132,7 @@ class LPGApiService {
   static Future<LPGProduct> updateLPGProduct(String id, Map<String, dynamic> productData) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(productData),
     );
     final data = _handleResponse(response);
@@ -142,7 +142,7 @@ class LPGApiService {
   static Future<void> deleteLPGProduct(String id) async {
     final response = await http.delete(
       Uri.parse('$_baseUrl/products/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     _handleResponse(response);
   }
@@ -155,7 +155,7 @@ class LPGApiService {
   }) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id/cylinder-state'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode({
         'state': state,
         'quantity': quantity,
@@ -169,7 +169,7 @@ class LPGApiService {
   static Future<LPGProduct> exchangeCylinder(String id, int quantity) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id/exchange'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode({'quantity': quantity}),
     );
     final data = _handleResponse(response);
@@ -179,7 +179,7 @@ class LPGApiService {
   static Future<List<LPGProduct>> getLowStockProducts() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/low-stock'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return (data['data'] as List)
@@ -199,7 +199,7 @@ class LPGApiService {
     final uri = Uri.parse('$_baseUrl/products/category/$category')
         .replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return (data['data'] as List)
@@ -210,7 +210,7 @@ class LPGApiService {
   static Future<Map<String, dynamic>> getCylinderSummary() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/cylinder-summary'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return data['data'];
@@ -219,7 +219,7 @@ class LPGApiService {
   static Future<List<LPGProduct>> getProductsDueForInspection({int days = 30}) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/inspection-due?days=$days'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return (data['data'] as List)
@@ -249,7 +249,7 @@ class LPGApiService {
 
     final uri = Uri.parse('$_baseUrl/customers').replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return (data['data'] as List)
@@ -260,7 +260,7 @@ class LPGApiService {
   static Future<LPGCustomer> getLPGCustomer(String id) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return LPGCustomer.fromJson(data['data']);
@@ -269,7 +269,7 @@ class LPGApiService {
   static Future<LPGCustomer> createLPGCustomer(Map<String, dynamic> customerData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(customerData),
     );
     final data = _handleResponse(response);
@@ -279,7 +279,7 @@ class LPGApiService {
   static Future<LPGCustomer> updateLPGCustomer(String id, Map<String, dynamic> customerData) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(customerData),
     );
     final data = _handleResponse(response);
@@ -289,7 +289,7 @@ class LPGApiService {
   static Future<void> deleteLPGCustomer(String id) async {
     final response = await http.delete(
       Uri.parse('$_baseUrl/customers/$id'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     _handleResponse(response);
   }
@@ -297,7 +297,7 @@ class LPGApiService {
   static Future<LPGCustomer> addPremises(String customerId, Map<String, dynamic> premisesData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers/$customerId/premises'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(premisesData),
     );
     final data = _handleResponse(response);
@@ -311,7 +311,7 @@ class LPGApiService {
   ) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$customerId/premises/$premisesId'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(premisesData),
     );
     final data = _handleResponse(response);
@@ -321,7 +321,7 @@ class LPGApiService {
   static Future<LPGCustomer> removePremises(String customerId, String premisesId) async {
     final response = await http.delete(
       Uri.parse('$_baseUrl/customers/$customerId/premises/$premisesId'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return LPGCustomer.fromJson(data['data']);
@@ -333,7 +333,7 @@ class LPGApiService {
   ) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/customers/$customerId/refill'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(refillData),
     );
     final data = _handleResponse(response);
@@ -353,7 +353,7 @@ class LPGApiService {
     final uri = Uri.parse('$_baseUrl/customers/$customerId/refill-history')
         .replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return (data['data'] as List)
@@ -368,7 +368,7 @@ class LPGApiService {
   }) async {
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$customerId/credit'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode({
         'amount': amount,
         'operation': operation,
@@ -381,7 +381,7 @@ class LPGApiService {
   static Future<List<LPGCustomer>> getCustomersDueForRefill({int days = 7}) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/due-refill?days=$days'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return (data['data'] as List)
@@ -392,7 +392,7 @@ class LPGApiService {
   static Future<List<LPGCustomer>> getTopCustomers({int limit = 10}) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/top-customers?limit=$limit'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return (data['data'] as List)
@@ -403,7 +403,7 @@ class LPGApiService {
   static Future<Map<String, dynamic>> getCustomerAnalytics() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/analytics'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return data['data'];
@@ -412,7 +412,7 @@ class LPGApiService {
   static Future<Map<String, dynamic>> getConsumptionPattern(String customerId) async {
     final response = await http.get(
       Uri.parse('$_baseUrl/customers/$customerId/consumption-pattern'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
     );
     final data = _handleResponse(response);
     return data['data'];
@@ -423,7 +423,7 @@ class LPGApiService {
   static Future<Map<String, dynamic>> createLPGSale(Map<String, dynamic> saleData) async {
     final response = await http.post(
       Uri.parse('$_baseUrl/sales'),
-      headers: _getHeaders(),
+      headers: await _getHeaders(),
       body: json.encode(saleData),
     );
     final data = _handleResponse(response);
@@ -450,7 +450,7 @@ class LPGApiService {
 
     final uri = Uri.parse('$_baseUrl/sales').replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return List<Map<String, dynamic>>.from(data['data']);
@@ -467,7 +467,7 @@ class LPGApiService {
 
     final uri = Uri.parse('$_baseUrl/sales/report').replace(queryParameters: queryParams);
     
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await http.get(uri, headers: await _getHeaders());
     final data = _handleResponse(response);
     
     return data['data'];

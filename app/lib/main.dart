@@ -12,9 +12,8 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
   
-  // Initialize API services
+  // Initialize API service
   await ApiService.init();
-  await LPGApiService.init();
   
   runApp(const LPGDealerApp());
 }
