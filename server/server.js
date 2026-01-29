@@ -7,7 +7,14 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
+const logger = require('./config/logger');
+const { requestLogger, detailedLogger } = require('./middleware/requestLogger');
+
 const app = express();
+
+// Request logging middleware (should be early in the chain)
+app.use(requestLogger);
+app.use(detailedLogger);
 
 // Security middlewares
 app.use(helmet());
@@ -30,8 +37,13 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Allow localhost and 127.0.0.1 for development
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
     // Check if the origin is in the allowed list or matches local network pattern
-    if (allowedOrigins.includes(origin) || /^http:\/\/192\.168\.1\..+:3000$/.test(origin)) {
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin) || /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin)) {
       return callback(null, true);
     }
     
@@ -82,6 +94,7 @@ app.use(require('./middleware/errorHandler'));
 
 // 404 handler
 app.use('*', (req, res) => {
+  logger.warn(`404 - Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({
     success: false,
     message: 'Route not found'
@@ -91,9 +104,11 @@ app.use('*', (req, res) => {
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
+    logger.info('✅ MongoDB Connected Successfully');
     console.log('✅ MongoDB Connected Successfully');
   })
   .catch((err) => {
+    logger.error('❌ MongoDB Connection Error:', { error: err.message, stack: err.stack });
     console.error('❌ MongoDB Connection Error:', err.message);
     process.exit(1);
   });
@@ -103,7 +118,27 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
 
 app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
+  const startupMessage = `🚀 Server running on http://${HOST}:${PORT}`;
+  logger.info(startupMessage);
+  logger.info(`🌐 Local Network: http://192.168.1.3:${PORT}`);
+  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info('📝 Logs directory: ./logs');
+  
+  console.log(startupMessage);
   console.log(`🌐 Local Network: http://192.168.1.3:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log('📝 Logs directory: ./logs');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception:', { error: error.message, stack: error.stack });
+  console.error('Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection:', { reason, promise });
+  console.error('Unhandled Rejection:', reason);
 });

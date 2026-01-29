@@ -1,6 +1,18 @@
+const logger = require('../config/logger');
+
 const errorHandler = (err, req, res, next) => {
   let error = { ...err };
   error.message = err.message;
+
+  // Log error with details
+  logger.error('Error Handler:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userId: req.user ? req.user.id : 'anonymous',
+  });
 
   // Log to console for dev
   console.error('❌ Error:', err);
@@ -42,3 +54,4 @@ const errorHandler = (err, req, res, next) => {
 };
 
 module.exports = errorHandler;
+
