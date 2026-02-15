@@ -11,7 +11,8 @@
     "seed:database": "node seeders/databaseSeeder.js",
     "seed:all": "npm run seed:roles && npm run seed:database",
     "seed:production": "node seed-production.js",
-    "test:implementation": "node test-implementation.js"
+    "test:implementation": "node test-implementation.js",
+    "test:vercel": "node test-vercel-apis.js"
   },
   "keywords": [
     "lpg",

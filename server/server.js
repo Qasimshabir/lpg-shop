@@ -80,6 +80,20 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug endpoint (only for checking if env vars are loaded)
+app.get('/api/debug/env', (req, res) => {
+  res.status(200).json({
+    success: true,
+    environment: process.env.NODE_ENV,
+    mongoConfigured: !!process.env.MONGO_URI,
+    jwtConfigured: !!process.env.JWT_SECRET,
+    mongoUri: process.env.MONGO_URI ? 
+      process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@') : 
+      'NOT SET',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Home/Welcome route
 app.get('/', (req, res) => {
   res.status(200).json({
