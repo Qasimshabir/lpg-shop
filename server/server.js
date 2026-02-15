@@ -1,20 +1,19 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const logger = require('./config/logger');
-const { connectDB } = require('./config/database');
+const { testConnection } = require('./config/supabase');
 const { requestLogger, detailedLogger } = require('./middleware/requestLogger');
 
 const app = express();
 
-// Connect to MongoDB with caching for serverless
-connectDB().catch(err => {
-  logger.error('Failed to connect to MongoDB:', err);
-  console.error('Failed to connect to MongoDB:', err.message);
+// Test Supabase connection on startup
+testConnection().catch(err => {
+  logger.error('Failed to connect to Supabase:', err);
+  console.error('Failed to connect to Supabase:', err.message);
 });
 
 // Request logging middleware (should be early in the chain)
@@ -61,21 +60,6 @@ app.use(cors({
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// Ensure MongoDB connection before handling requests (middleware)
-app.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (error) {
-    logger.error('Database connection error:', error);
-    res.status(503).json({
-      success: false,
-      message: 'Database connection unavailable',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
-
 // Routes
 app.use('/api', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
@@ -94,26 +78,36 @@ app.use('/api/safety', require('./routes/safetyRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'LPG Dealer Management API is running',
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const { getConnectionStatus } = require('./config/supabase');
+    res.status(200).json({
+      status: 'OK',
+      message: 'LPG Dealer Management API is running',
+      database: 'Supabase',
+      connectionStatus: getConnectionStatus(),
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Health check failed',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Debug endpoint (only for checking if env vars are loaded)
 app.get('/api/debug/env', (req, res) => {
-  const { getConnectionStatus } = require('./config/database');
+  const { getConnectionStatus } = require('./config/supabase');
   
   res.status(200).json({
     success: true,
     environment: process.env.NODE_ENV,
-    mongoConfigured: !!process.env.MONGO_URI,
+    supabaseConfigured: !!process.env.SUPABASE_URL && !!process.env.SUPABASE_ANON_KEY,
     jwtConfigured: !!process.env.JWT_SECRET,
-    mongoUri: process.env.MONGO_URI ? 
-      process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@') : 
-      'NOT SET',
+    supabaseUrl: process.env.SUPABASE_URL || 'NOT SET',
     connectionStatus: getConnectionStatus(),
     timestamp: new Date().toISOString()
   });
