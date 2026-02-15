@@ -11,7 +11,6 @@ const getLPGProducts = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Build query
     let query = supabase
       .from('lpg_products')
       .select('*', { count: 'exact' })
@@ -29,7 +28,6 @@ const getLPGProducts = async (req, res, next) => {
       query = query.or(`name.ilike.%${req.query.search}%,sku.ilike.%${req.query.search}%,description.ilike.%${req.query.search}%`);
     }
 
-    // Apply pagination and sorting
     query = query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -104,9 +102,8 @@ const createLPGProduct = async (req, res, next) => {
       is_active: req.body.is_active !== undefined ? req.body.is_active : true
     };
 
-    // Handle image upload if provided
     if (req.body.image && req.body.image.startsWith('data:image/')) {
-      productData.image_url = await saveDataUriToFile(req.body.image, 'products');
+      productData.image_url = await saveDataUriToFile(req.body.image, 'products', req.user.id);
     }
 
     const { data: product, error } = await supabase
@@ -134,7 +131,6 @@ const updateLPGProduct = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
-    // Check if product exists
     const { data: existing } = await supabase
       .from('lpg_products')
       .select('id')
@@ -162,9 +158,8 @@ const updateLPGProduct = async (req, res, next) => {
     if (req.body.sku !== undefined) updateData.sku = req.body.sku;
     if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
 
-    // Handle image upload
     if (req.body.image && req.body.image.startsWith('data:image/')) {
-      updateData.image_url = await saveDataUriToFile(req.body.image, 'products');
+      updateData.image_url = await saveDataUriToFile(req.body.image, 'products', req.user.id);
     } else if (req.body.image_url !== undefined) {
       updateData.image_url = req.body.image_url;
     }
@@ -221,15 +216,107 @@ const deleteLPGProduct = async (req, res, next) => {
   }
 };
 
-// Simplified methods for Supabase
+// @desc    Update cylinder state
+// @route   PUT /api/products/:id/cylinder-state
+// @access  Private
 const updateCylinderState = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+  try {
+    const supabase = getSupabaseClient();
+    const { quantity, operation = 'add' } = req.body;
+
+    const { data: product, error: fetchError } = await supabase
+      .from('lpg_products')
+      .select('stock_quantity')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchError || !product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    let newQuantity = product.stock_quantity;
+    if (operation === 'add') {
+      newQuantity += quantity;
+    } else if (operation === 'subtract') {
+      newQuantity = Math.max(0, newQuantity - quantity);
+    }
+
+    const { data: updated, error } = await supabase
+      .from('lpg_products')
+      .update({ stock_quantity: newQuantity })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Stock updated successfully',
+      data: updated
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
+// @desc    Exchange cylinder
+// @route   PUT /api/products/:id/exchange
+// @access  Private
 const exchangeCylinder = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+  try {
+    const supabase = getSupabaseClient();
+    const { quantity } = req.body;
+
+    const { data: product, error: fetchError } = await supabase
+      .from('lpg_products')
+      .select('stock_quantity')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchError || !product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    if (product.stock_quantity < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient stock for exchange'
+      });
+    }
+
+    const { data: updated, error } = await supabase
+      .from('lpg_products')
+      .update({ stock_quantity: product.stock_quantity - quantity })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Cylinder exchange completed successfully',
+      data: updated
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
+// @desc    Get low stock products
+// @route   GET /api/products/low-stock
+// @access  Private
 const getLowStockProducts = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
@@ -239,21 +326,25 @@ const getLowStockProducts = async (req, res, next) => {
       .select('*')
       .eq('user_id', req.user.id)
       .eq('is_active', true)
-      .filter('stock_quantity', 'lte', 'reorder_level')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
 
+    const lowStock = products.filter(p => p.stock_quantity <= p.reorder_level);
+
     res.json({
       success: true,
-      count: products?.length || 0,
-      data: products || []
+      count: lowStock.length,
+      data: lowStock
     });
   } catch (error) {
     next(error);
   }
 };
 
+// @desc    Get products by category
+// @route   GET /api/products/category/:category
+// @access  Private
 const getProductsByCategory = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
@@ -286,12 +377,68 @@ const getProductsByCategory = async (req, res, next) => {
   }
 };
 
+// @desc    Get cylinder inventory summary
+// @route   GET /api/products/cylinder-summary
+// @access  Private
 const getCylinderSummary = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { data: products, error } = await supabase
+      .from('lpg_products')
+      .select('category, weight, stock_quantity')
+      .eq('user_id', req.user.id)
+      .eq('is_active', true)
+      .ilike('category', '%cylinder%');
+
+    if (error) throw error;
+
+    const summary = products.reduce((acc, product) => {
+      const key = `${product.weight}kg`;
+      if (!acc[key]) {
+        acc[key] = {
+          type: key,
+          totalStock: 0,
+          products: 0
+        };
+      }
+      acc[key].totalStock += product.stock_quantity;
+      acc[key].products += 1;
+      return acc;
+    }, {});
+
+    res.json({
+      success: true,
+      data: Object.values(summary)
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
+// @desc    Get products due for inspection
+// @route   GET /api/products/inspection-due
+// @access  Private
 const getProductsDueForInspection = async (req, res, next) => {
-  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { data: cylinders, error } = await supabase
+      .from('cylinders')
+      .select('*, lpg_products(*)')
+      .lte('next_inspection_date', new Date().toISOString().split('T')[0])
+      .order('next_inspection_date', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      count: cylinders?.length || 0,
+      data: cylinders || []
+    });
+  } catch (error) {
+    next(error);
+  }
 };
 
 module.exports = {
