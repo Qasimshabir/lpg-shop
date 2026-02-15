@@ -295,20 +295,49 @@ class LPGApiService {
   }
 
   static Future<LPGCustomer> createLPGCustomer(Map<String, dynamic> customerData) async {
+    // Convert to snake_case and map to database fields
+    final dbData = <String, dynamic>{};
+    
+    if (customerData['name'] != null) dbData['name'] = customerData['name'];
+    if (customerData['email'] != null) dbData['email'] = customerData['email'];
+    if (customerData['phone'] != null) dbData['phone'] = customerData['phone'];
+    if (customerData['address'] != null) dbData['address'] = customerData['address'];
+    if (customerData['city'] != null) dbData['city'] = customerData['city'];
+    if (customerData['state'] != null) dbData['state'] = customerData['state'];
+    if (customerData['postalCode'] != null) dbData['postal_code'] = customerData['postalCode'];
+    if (customerData['customerType'] != null) dbData['customer_type'] = customerData['customerType'];
+    if (customerData['isActive'] != null) dbData['is_active'] = customerData['isActive'];
+    if (customerData['notes'] != null) dbData['notes'] = customerData['notes'];
+    if (customerData['creditLimit'] != null) dbData['credit_limit'] = customerData['creditLimit'];
+    
     final response = await http.post(
       Uri.parse('$_baseUrl/customers'),
       headers: await _getHeaders(),
-      body: json.encode(customerData),
+      body: json.encode(dbData),
     );
     final data = _handleResponse(response);
     return LPGCustomer.fromJson(data['data']);
   }
 
   static Future<LPGCustomer> updateLPGCustomer(String id, Map<String, dynamic> customerData) async {
+    // Convert to snake_case and map to database fields
+    final dbData = <String, dynamic>{};
+    
+    if (customerData['name'] != null) dbData['name'] = customerData['name'];
+    if (customerData['email'] != null) dbData['email'] = customerData['email'];
+    if (customerData['phone'] != null) dbData['phone'] = customerData['phone'];
+    if (customerData['address'] != null) dbData['address'] = customerData['address'];
+    if (customerData['city'] != null) dbData['city'] = customerData['city'];
+    if (customerData['state'] != null) dbData['state'] = customerData['state'];
+    if (customerData['postalCode'] != null) dbData['postal_code'] = customerData['postalCode'];
+    if (customerData['customerType'] != null) dbData['customer_type'] = customerData['customerType'];
+    if (customerData['isActive'] != null) dbData['is_active'] = customerData['isActive'];
+    if (customerData['notes'] != null) dbData['notes'] = customerData['notes'];
+    
     final response = await http.put(
       Uri.parse('$_baseUrl/customers/$id'),
       headers: await _getHeaders(),
-      body: json.encode(customerData),
+      body: json.encode(dbData),
     );
     final data = _handleResponse(response);
     return LPGCustomer.fromJson(data['data']);

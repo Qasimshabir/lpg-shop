@@ -97,35 +97,14 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'alternatePhone': _alternatePhoneController.text.trim().isEmpty ? null : _alternatePhoneController.text.trim(),
         'customerType': _customerType,
-        'creditLimit': double.parse(_creditLimitController.text),
-        'preferredCylinderCapacity': _cylinderCapacity,
+        'address': _streetController.text.trim(),
+        'city': _cityController.text.trim(),
+        'state': _stateController.text.trim(),
+        'postalCode': _pincodeController.text.trim(),
+        'notes': _landmarkController.text.trim().isEmpty ? null : 'Landmark: ${_landmarkController.text.trim()}',
+        'isActive': true,
       };
-
-      if (_customerType == 'Business') {
-        customerData['businessName'] = _businessNameController.text.trim();
-        customerData['gstNumber'] = _gstNumberController.text.trim().isEmpty ? null : _gstNumberController.text.trim();
-      }
-
-      // Only add premises if creating new customer
-      if (widget.customer == null) {
-        customerData['premises'] = [
-          {
-            'name': _premisesNameController.text.trim(),
-            'type': _premisesType,
-            'address': {
-              'street': _streetController.text.trim(),
-              'city': _cityController.text.trim(),
-              'state': _stateController.text.trim(),
-              'pincode': _pincodeController.text.trim(),
-              'landmark': _landmarkController.text.trim().isEmpty ? null : _landmarkController.text.trim(),
-            },
-            'cylinderCapacity': _cylinderCapacity,
-            'isPrimary': true,
-          }
-        ];
-      }
 
       if (widget.customer != null) {
         // Update existing customer
