@@ -86,10 +86,20 @@ const createLPGProduct = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
+    // Handle brand_id - if it's a string (brand name) or invalid UUID, set to null
+    let brandId = null;
+    if (req.body.brand_id) {
+      // Check if it's a valid UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (uuidRegex.test(req.body.brand_id)) {
+        brandId = req.body.brand_id;
+      }
+    }
+    
     const productData = {
       user_id: req.user.id,
       name: req.body.name,
-      brand_id: req.body.brand_id || req.body.brand || null,
+      brand_id: brandId,
       category: req.body.category,
       weight: req.body.weight || req.body.capacity || null,
       weight_unit: req.body.weight_unit || 'kg',
