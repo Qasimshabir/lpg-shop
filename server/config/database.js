@@ -29,8 +29,8 @@ function encodeMongoURI(uri) {
 }
 
 /**
- * Connect to MongoDB with connection caching for serverless environments
- * Following MongoDB Node.js Driver best practices
+ * Connect to MongoDB with Stable API and connection caching
+ * Following MongoDB Node.js Driver documentation
  * https://www.mongodb.com/docs/drivers/node/current/
  */
 async function connectDB() {
@@ -55,8 +55,15 @@ async function connectDB() {
     // Encode the URI properly
     const encodedURI = encodeMongoURI(process.env.MONGO_URI);
     
-    // MongoDB connection options following best practices
+    // MongoDB connection options with Stable API
     const options = {
+      // Stable API Version (MongoDB 5.0+)
+      serverApi: {
+        version: '1',
+        strict: true,
+        deprecationErrors: true,
+      },
+      
       // Connection pool settings
       maxPoolSize: 10,
       minPoolSize: 2,
@@ -89,8 +96,16 @@ async function connectDB() {
     cachedConnection = mongoose.connection;
     
     console.log('✅ MongoDB connected successfully');
-    console.log('   Database:', mongoose.connection.db.databaseName);
+    console.log('   Database:', mongoose.connection.db.databaseName || 'default');
     console.log('   Host:', mongoose.connection.host);
+    
+    // Ping to confirm connection (like in MongoDB documentation)
+    try {
+      await mongoose.connection.db.admin().ping();
+      console.log('   Ping: Successful ✓');
+    } catch (pingError) {
+      console.log('   Ping: Failed (but connection established)');
+    }
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
