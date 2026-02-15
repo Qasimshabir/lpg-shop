@@ -238,6 +238,8 @@ CREATE TABLE delivery_personnel (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
+CREATE INDEX idx_delivery_personnel_user ON delivery_personnel(user_id);
+
 -- ============================================
 -- DELIVERY ROUTES TABLE
 -- ============================================
@@ -249,6 +251,9 @@ CREATE TABLE delivery_routes (
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE INDEX idx_delivery_routes_personnel ON delivery_routes(personnel_id);
+CREATE INDEX idx_delivery_routes_date ON delivery_routes(date);
 
 -- ============================================
 -- SAFETY CHECKLISTS TABLE

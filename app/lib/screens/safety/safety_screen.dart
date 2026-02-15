@@ -34,14 +34,27 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
     try {
       setState(() => _isLoading = true);
       
-      final results = await Future.wait([
-        ApiService.get('/safety/incidents'),
-        ApiService.get('/safety/compliance-report'),
-      ]);
+      // Load data with individual error handling
+      List<dynamic> incidents = [];
+      Map<String, dynamic> complianceReport = {};
+      
+      try {
+        final incidentsResult = await ApiService.get('/safety/incidents');
+        incidents = incidentsResult['data'] ?? [];
+      } catch (e) {
+        print('Failed to load incidents: $e');
+      }
+      
+      try {
+        final complianceResult = await ApiService.get('/safety/compliance-report');
+        complianceReport = complianceResult['data'] ?? {};
+      } catch (e) {
+        print('Failed to load compliance report: $e');
+      }
       
       setState(() {
-        _incidents = results[0]['data'] ?? [];
-        _complianceReport = results[1]['data'] ?? {};
+        _incidents = incidents;
+        _complianceReport = complianceReport;
         _isLoading = false;
       });
     } catch (e) {
@@ -107,8 +120,9 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
   }
 
   Widget _buildIncidentCard(Map<String, dynamic> incident) {
-    final date = incident['incident_date'] != null 
-        ? DateTime.parse(incident['incident_date']) 
+    final incidentDate = incident['incident_date'] ?? incident['incidentDate'];
+    final date = incidentDate != null 
+        ? DateTime.parse(incidentDate) 
         : DateTime.now();
     final severity = incident['severity'] ?? 'low';
     final status = incident['status'] ?? 'reported';
@@ -220,9 +234,12 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
   }
 
   Widget _buildComplianceTab() {
-    final totalChecklists = _complianceReport['totalChecklists'] ?? 0;
-    final passedChecklists = _complianceReport['passedChecklists'] ?? 0;
-    final failedChecklists = _complianceReport['failedChecklists'] ?? 0;
+    final totalChecklists = _complianceReport['totalChecklists'] ?? 
+                           _complianceReport['total_checklists'] ?? 0;
+    final passedChecklists = _complianceReport['passedChecklists'] ?? 
+                            _complianceReport['passed_checklists'] ?? 0;
+    final failedChecklists = _complianceReport['failedChecklists'] ?? 
+                            _complianceReport['failed_checklists'] ?? 0;
     final complianceRate = totalChecklists > 0 
         ? (passedChecklists / totalChecklists * 100).toStringAsFixed(1)
         : '0.0';
@@ -413,7 +430,7 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                     'description': descriptionController.text,
                     'location': locationController.text,
                     'severity': severity,
-                    'incidentDate': DateTime.now().toIso8601String(),
+                    'incident_date': DateTime.now().toIso8601String(),
                   });
                   Navigator.pop(context);
                   _showSuccess('Incident reported successfully');

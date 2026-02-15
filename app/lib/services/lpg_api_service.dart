@@ -541,4 +541,38 @@ class LPGApiService {
     
     return data['data'];
   }
+
+  // --- Cylinder APIs ---
+
+  static Future<Map<String, dynamic>> registerCylinder(Map<String, dynamic> cylinderData) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/cylinders'),
+      headers: await _getHeaders(),
+      body: json.encode(cylinderData),
+    );
+    final data = _handleResponse(response);
+    return data['data'];
+  }
+
+  static Future<List<dynamic>> getCylinders({String? status}) async {
+    final queryParams = <String, String>{};
+    if (status != null) queryParams['status'] = status;
+
+    final uri = Uri.parse('$_baseUrl/cylinders').replace(queryParameters: queryParams);
+    
+    final response = await http.get(uri, headers: await _getHeaders());
+    final data = _handleResponse(response);
+    
+    return data['data'] as List<dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> updateCylinderStatus(String id, String status) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/cylinders/$id/status'),
+      headers: await _getHeaders(),
+      body: json.encode({'status': status}),
+    );
+    final data = _handleResponse(response);
+    return data['data'];
+  }
 }

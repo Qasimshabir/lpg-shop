@@ -75,6 +75,11 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
                       ],
                     ),
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddCylinderDialog,
+        icon: Icon(Icons.add),
+        label: Text('Add to Track'),
+      ),
     );
   }
 
@@ -275,6 +280,109 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: LPGColors.error),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: LPGColors.success),
+    );
+  }
+
+  Future<void> _showAddCylinderDialog() async {
+    final serialController = TextEditingController();
+    String? selectedProductId;
+    String? selectedStatus = 'available';
+    
+    // Load products for selection
+    List<dynamic> products = [];
+    try {
+      final productsData = await LPGApiService.getLPGProducts(limit: 100);
+      products = productsData;
+    } catch (e) {
+      _showError('Failed to load products: $e');
+      return;
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Add Cylinder to Track'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: serialController,
+                  decoration: InputDecoration(
+                    labelText: 'Serial Number',
+                    hintText: 'Enter cylinder serial number',
+                  ),
+                ),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedProductId,
+                  decoration: InputDecoration(labelText: 'Product'),
+                  items: products.map((product) {
+                    return DropdownMenuItem<String>(
+                      value: product.id,
+                      child: Text('${product.name} - ${product.weight}${product.weightUnit}'),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setDialogState(() => selectedProductId = value);
+                  },
+                ),
+                SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: InputDecoration(labelText: 'Status'),
+                  items: [
+                    DropdownMenuItem(value: 'available', child: Text('Available')),
+                    DropdownMenuItem(value: 'in_use', child: Text('In Use')),
+                    DropdownMenuItem(value: 'maintenance', child: Text('Maintenance')),
+                    DropdownMenuItem(value: 'retired', child: Text('Retired')),
+                  ],
+                  onChanged: (value) {
+                    setDialogState(() => selectedStatus = value);
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (serialController.text.isEmpty) {
+                  _showError('Please enter serial number');
+                  return;
+                }
+
+                try {
+                  await LPGApiService.registerCylinder({
+                    'serial_number': serialController.text,
+                    'product_id': selectedProductId,
+                    'status': selectedStatus,
+                  });
+                  Navigator.pop(context);
+                  _showSuccess('Cylinder added successfully');
+                  _loadCylinders();
+                } catch (e) {
+                  _showError('Failed to add cylinder: $e');
+                }
+              },
+              child: Text('Add'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

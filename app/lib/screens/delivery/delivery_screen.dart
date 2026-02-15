@@ -35,16 +35,36 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     try {
       setState(() => _isLoading = true);
       
-      final results = await Future.wait([
-        ApiService.get('/delivery/pending'),
-        ApiService.get('/delivery/routes'),
-        ApiService.get('/delivery/personnel'),
-      ]);
+      // Load data with individual error handling
+      List<dynamic> pendingDeliveries = [];
+      List<dynamic> deliveryRoutes = [];
+      List<dynamic> personnel = [];
+      
+      try {
+        final pendingResult = await ApiService.get('/delivery/pending');
+        pendingDeliveries = pendingResult['data'] ?? [];
+      } catch (e) {
+        print('Failed to load pending deliveries: $e');
+      }
+      
+      try {
+        final routesResult = await ApiService.get('/delivery/routes');
+        deliveryRoutes = routesResult['data'] ?? [];
+      } catch (e) {
+        print('Failed to load delivery routes: $e');
+      }
+      
+      try {
+        final personnelResult = await ApiService.get('/delivery/personnel');
+        personnel = personnelResult['data'] ?? [];
+      } catch (e) {
+        print('Failed to load delivery personnel: $e');
+      }
       
       setState(() {
-        _pendingDeliveries = results[0]['data'] ?? [];
-        _deliveryRoutes = results[1]['data'] ?? [];
-        _personnel = results[2]['data'] ?? [];
+        _pendingDeliveries = pendingDeliveries;
+        _deliveryRoutes = deliveryRoutes;
+        _personnel = personnel;
         _isLoading = false;
       });
     } catch (e) {
@@ -111,9 +131,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   }
 
   Widget _buildDeliveryCard(Map<String, dynamic> delivery) {
-    final customer = delivery['customer'] ?? {};
-    final address = delivery['delivery_address'] ?? customer['address'] ?? 'No address';
-    final amount = (delivery['total_amount'] ?? 0).toDouble();
+    // Handle both snake_case and camelCase
+    final customer = delivery['customer'] ?? delivery['lpg_customers'] ?? {};
+    final deliveryAddress = delivery['delivery_address'] ?? delivery['deliveryAddress'];
+    final address = deliveryAddress ?? customer['address'] ?? 'No address';
+    final totalAmount = delivery['total_amount'] ?? delivery['totalAmount'] ?? 0;
+    final amount = (totalAmount is num) ? totalAmount.toDouble() : 0.0;
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
@@ -133,7 +156,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             SizedBox(height: 4),
             Text(address, maxLines: 2, overflow: TextOverflow.ellipsis),
             SizedBox(height: 4),
-            Text('Rs. ${amount.toStringAsFixed(0)}', style: TextStyle(color: LPGColors.success)),
+            Text('₹${amount.toStringAsFixed(0)}', style: TextStyle(color: LPGColors.success)),
           ],
         ),
         trailing: ElevatedButton(
@@ -167,9 +190,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   }
 
   Widget _buildRouteCard(Map<String, dynamic> route) {
-    final date = route['date'] != null ? DateTime.parse(route['date']) : DateTime.now();
+    final dateStr = route['date'];
+    final date = dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
     final status = route['status'] ?? 'planned';
-    final personnel = route['personnel'] ?? {};
+    final personnel = route['personnel'] ?? route['delivery_personnel'] ?? {};
 
     Color statusColor;
     switch (status) {
@@ -259,7 +283,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   Widget _buildPersonnelCard(Map<String, dynamic> person) {
     final user = person['user'] ?? {};
-    final isAvailable = person['is_available'] ?? false;
+    final isAvailable = person['is_available'] ?? person['isAvailable'] ?? false;
+    final vehicleNumber = person['vehicle_number'] ?? person['vehicleNumber'];
+    final phone = person['phone'];
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
@@ -276,10 +302,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 4),
-            if (person['vehicle_number'] != null)
-              Text('Vehicle: ${person['vehicle_number']}'),
-            if (person['phone'] != null)
-              Text('Phone: ${person['phone']}'),
+            if (vehicleNumber != null)
+              Text('Vehicle: $vehicleNumber'),
+            if (phone != null)
+              Text('Phone: $phone'),
           ],
         ),
         trailing: Container(
@@ -341,8 +367,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     if (selectedPersonnel != null) {
       try {
         await ApiService.post('/delivery/assign', {
-          'saleId': deliveryId,
-          'personnelId': selectedPersonnel['id'],
+          'sale_ids': [deliveryId],
+          'personnel_id': selectedPersonnel['id'],
         });
         _showSuccess('Delivery assigned successfully');
         _loadData();
@@ -407,8 +433,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 await ApiService.post('/delivery/personnel', {
                   'name': nameController.text,
                   'phone': phoneController.text,
-                  'vehicleNumber': vehicleController.text,
-                  'licenseNumber': licenseController.text,
+                  'vehicle_number': vehicleController.text,
+                  'license_number': licenseController.text,
                 });
                 Navigator.pop(context);
                 _showSuccess('Personnel added successfully');
