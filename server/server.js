@@ -3,8 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
-const fs = require('fs');
 require('dotenv').config();
 
 const logger = require('./config/logger');
@@ -56,14 +54,6 @@ app.use(cors({
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
-// Ensure uploads directory exists and serve it statically
-const uploadsDir = path.join(__dirname, 'uploads');
-const productUploadsDir = path.join(uploadsDir, 'products');
-if (!fs.existsSync(productUploadsDir)) {
-  fs.mkdirSync(productUploadsDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsDir));
-
 // Routes
 app.use('/api', require('./routes/authRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
@@ -71,6 +61,7 @@ app.use('/api/roles', require('./routes/roleRoutes'));
 app.use('/api/brands', require('./routes/brandRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/images', require('./routes/imageRoutes'));
 
 // LPG Dealer Routes
 app.use('/api/products', require('./routes/lpgProductRoutes'));
@@ -85,6 +76,72 @@ app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'OK',
     message: 'LPG Dealer Management API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Home/Welcome route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Welcome to LPG Dealer Management API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: {
+        register: 'POST /api/register',
+        login: 'POST /api/login',
+        forgotPassword: 'POST /api/forgot-password'
+      },
+      users: {
+        profile: 'GET /api/users/me',
+        updateProfile: 'PUT /api/users/me',
+        changePassword: 'PUT /api/users/password'
+      },
+      products: {
+        list: 'GET /api/products',
+        create: 'POST /api/products',
+        details: 'GET /api/products/:id',
+        update: 'PUT /api/products/:id',
+        delete: 'DELETE /api/products/:id'
+      },
+      customers: {
+        list: 'GET /api/customers',
+        create: 'POST /api/customers',
+        update: 'PUT /api/customers/:id',
+        delete: 'DELETE /api/customers/:id'
+      },
+      sales: {
+        list: 'GET /api/sales',
+        create: 'POST /api/sales',
+        report: 'GET /api/sales/report'
+      },
+      images: {
+        get: 'GET /api/images/:id'
+      }
+    },
+    documentation: 'https://github.com/your-repo/lpg-dealer-api',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API root route
+app.get('/api', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'LPG Dealer Management API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: [
+      '/api/health',
+      '/api/register',
+      '/api/login',
+      '/api/users',
+      '/api/products',
+      '/api/customers',
+      '/api/sales',
+      '/api/images'
+    ],
     timestamp: new Date().toISOString()
   });
 });
@@ -110,25 +167,31 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => {
     logger.error('❌ MongoDB Connection Error:', { error: err.message, stack: err.stack });
     console.error('❌ MongoDB Connection Error:', err.message);
-    process.exit(1);
+    // Don't exit in serverless environment
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   });
 
-// Start Server
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
+// Start Server (only if not in serverless environment)
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  const HOST = process.env.HOST || '0.0.0.0';
 
-app.listen(PORT, HOST, () => {
-  const startupMessage = `🚀 Server running on http://${HOST}:${PORT}`;
-  logger.info(startupMessage);
-  logger.info(`🌐 Local Network: http://192.168.1.3:${PORT}`);
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info('📝 Logs directory: ./logs');
-  
-  console.log(startupMessage);
-  console.log(`🌐 Local Network: http://192.168.1.3:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('📝 Logs directory: ./logs');
-});
+  app.listen(PORT, HOST, () => {
+    const startupMessage = `🚀 Server running on http://${HOST}:${PORT}`;
+    logger.info(startupMessage);
+    logger.info(`🌐 Local Network: http://192.168.18.196:${PORT}`);
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    console.log(startupMessage);
+    console.log(`🌐 Local Network: http://192.168.18.196:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {

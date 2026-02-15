@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Service for managing application settings including Base URL configuration
 class SettingsService {
   static const String _baseUrlKey = 'api_base_url';
-  static const String _defaultBaseUrl = 'http://localhost:5000/api';
+  static const String _defaultBaseUrl = 'http://192.168.18.196:5000/api';
   
   static SharedPreferences? _prefs;
 
