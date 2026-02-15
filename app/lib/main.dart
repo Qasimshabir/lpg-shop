@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'lpg_theme.dart';
 import 'services/api_service.dart';
+import 'services/settings_service.dart';
 import 'services/lpg_api_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/lpg/lpg_dashboard_screen.dart';
@@ -11,6 +12,9 @@ void main() async {
   
   // Initialize Hive
   await Hive.initFlutter();
+  
+  // Initialize Settings service (must be before API service)
+  await SettingsService.init();
   
   // Initialize API service
   await ApiService.init();

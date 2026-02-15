@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/settings_service.dart';
+import '../../widgets/base_url_config_dialog.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'register_screen.dart';
 
@@ -16,6 +18,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  int _tapCount = 0;
+  DateTime? _lastTapTime;
 
   @override
   void dispose() {
@@ -54,6 +58,43 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _handleSettingsIconTap() {
+    final now = DateTime.now();
+    
+    // Reset tap count if more than 1 second has passed since last tap
+    if (_lastTapTime == null || now.difference(_lastTapTime!) > const Duration(seconds: 1)) {
+      _tapCount = 1;
+    } else {
+      _tapCount++;
+    }
+    
+    _lastTapTime = now;
+    
+    // Open settings dialog on double tap
+    if (_tapCount >= 2) {
+      _tapCount = 0;
+      _openBaseUrlConfig();
+    }
+  }
+
+  Future<void> _openBaseUrlConfig() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => const BaseUrlConfigDialog(),
+    );
+    
+    if (result == true && mounted) {
+      // Show a message indicating the URL was updated
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Base URL updated to: ${SettingsService.getBaseUrl()}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -68,28 +109,60 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo and Title
-                  const Icon(
-                    Icons.local_gas_station,
-                    size: 80,
-                    color: Color(0xFFE67E22),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'LPG Dealer Shop',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Welcome Back!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                    ),
+                  // Logo and Title with Settings Icon
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Column(
+                        children: [
+                          GestureDetector(
+                            onTap: _handleSettingsIconTap,
+                            child: const Icon(
+                              Icons.local_gas_station,
+                              size: 80,
+                              color: Color(0xFFE67E22),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'LPG Dealer Shop',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Welcome Back!',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Settings hint badge
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Tooltip(
+                          message: 'Double-tap icon to configure server URL',
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.settings,
+                              size: 16,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 48),
 
