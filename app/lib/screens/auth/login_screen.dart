@@ -109,60 +109,31 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Logo and Title with Settings Icon
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Column(
-                        children: [
-                          GestureDetector(
-                            onTap: _handleSettingsIconTap,
-                            child: const Icon(
-                              Icons.local_gas_station,
-                              size: 80,
-                              color: Color(0xFFE67E22),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'LPG Dealer Shop',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'Welcome Back!',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ],
-                      ),
-                      // Settings hint badge
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Tooltip(
-                          message: 'Double-tap icon to configure server URL',
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.settings,
-                              size: 16,
-                              color: Colors.white70,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Logo and Title
+                  GestureDetector(
+                    onTap: _handleSettingsIconTap,
+                    child: const Icon(
+                      Icons.local_gas_station,
+                      size: 80,
+                      color: Color(0xFFE67E22),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'LPG Dealer Shop',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Welcome Back!',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                    ),
                   ),
                   const SizedBox(height: 48),
 

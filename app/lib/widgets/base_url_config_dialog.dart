@@ -149,13 +149,19 @@ class _BaseUrlConfigDialogState extends State<BaseUrlConfigDialog> {
           const Text('Configure Base URL'),
         ],
       ),
-      content: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: 400,
+          minWidth: 300,
+        ),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               const Text(
                 'Enter the API server URL:',
                 style: TextStyle(fontSize: 14, color: Colors.black87),
@@ -172,7 +178,15 @@ class _BaseUrlConfigDialogState extends State<BaseUrlConfigDialog> {
                   border: const OutlineInputBorder(),
                   helperText: 'Example: http://192.168.1.100:5000',
                   errorText: _errorMessage,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 16,
+                  ),
                 ),
+                style: const TextStyle(fontSize: 14),
+                maxLines: 2,
+                minLines: 1,
+                keyboardType: TextInputType.url,
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a URL';
