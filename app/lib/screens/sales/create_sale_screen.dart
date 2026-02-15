@@ -81,15 +81,14 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
 
     try {
       final saleData = {
-        'customer': _selectedCustomer?.id,
+        'customer_id': _selectedCustomer?.id,
         'items': _cartItems.map((item) => {
-          'product': item['product'],
+          'product_id': item['product'],
           'quantity': item['quantity'],
-          'unitPrice': item['unitPrice'],
+          'unit_price': item['unitPrice'],
         }).toList(),
-        'paymentMethod': _paymentMethod,
-        'discount': _discount,
-        'discountType': 'fixed',
+        'payment_method': _paymentMethod,
+        'payment_status': _paymentMethod == 'Credit' ? 'pending' : 'paid',
       };
 
       print('Creating sale with data: $saleData');

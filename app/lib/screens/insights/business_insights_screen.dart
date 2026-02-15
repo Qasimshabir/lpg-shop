@@ -98,7 +98,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                 Expanded(
                   child: _buildMetricBox(
                     'Total Revenue',
-                    'Rs. ${totalRevenue.toStringAsFixed(0)}',
+                    '₹${totalRevenue.toStringAsFixed(0)}',
                     Icons.attach_money,
                     LPGColors.success,
                   ),
@@ -120,7 +120,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                 Expanded(
                   child: _buildMetricBox(
                     'Avg Sale Value',
-                    'Rs. ${avgSaleValue.toStringAsFixed(0)}',
+                    '₹${avgSaleValue.toStringAsFixed(0)}',
                     Icons.trending_up,
                     LPGColors.info,
                   ),
@@ -275,7 +275,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                       ),
                     ),
                     Text(
-                      'Rs. ${revenue.toStringAsFixed(0)}',
+                      '₹${revenue.toStringAsFixed(0)}',
                       style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success),
                     ),
                   ],

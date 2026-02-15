@@ -138,7 +138,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Revenue',
-                'Rs. ${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
+                '₹${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.attach_money,
                 LPGColors.success,
               ),
@@ -160,7 +160,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Avg Sale',
-                'Rs. ${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
+                '₹${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.trending_up,
                 LPGColors.warning,
               ),

@@ -71,50 +71,53 @@ class LPGProduct {
 
   factory LPGProduct.fromJson(Map<String, dynamic> json) {
     return LPGProduct(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
-      brand: json['brand'] ?? '',
+      brand: json['brand'] ?? json['brand_id']?.toString() ?? '',
       category: json['category'] ?? '',
-      productType: json['productType'] ?? 'cylinder',
-      cylinderType: json['cylinderType'],
-      capacity: json['capacity']?.toDouble(),
-      pressureRating: json['pressureRating'],
-      cylinderStates: json['cylinderStates'] != null 
-          ? CylinderStates.fromJson(json['cylinderStates'])
+      productType: json['productType'] ?? json['product_type'] ?? 'cylinder',
+      cylinderType: json['cylinderType'] ?? json['cylinder_type'],
+      capacity: (json['capacity'] ?? json['weight'])?.toDouble(),
+      pressureRating: json['pressureRating'] ?? json['pressure_rating'],
+      cylinderStates: json['cylinderStates'] ?? json['cylinder_states'] != null 
+          ? CylinderStates.fromJson(json['cylinderStates'] ?? json['cylinder_states'])
           : null,
-      unit: json['unit'] ?? 'Piece',
-      stock: json['stock'] ?? 0,
-      minStock: json['minStock'] ?? 5,
-      maxStock: json['maxStock'] ?? 100,
+      unit: json['unit'] ?? json['weight_unit'] ?? 'Piece',
+      stock: json['stock'] ?? json['stock_quantity'] ?? 0,
+      minStock: json['minStock'] ?? json['min_stock'] ?? json['reorder_level'] ?? 5,
+      maxStock: json['maxStock'] ?? json['max_stock'] ?? 100,
       price: (json['price'] ?? 0).toDouble(),
-      costPrice: (json['costPrice'] ?? 0).toDouble(),
-      depositAmount: (json['depositAmount'] ?? 0).toDouble(),
-      refillPrice: (json['refillPrice'] ?? 0).toDouble(),
+      costPrice: (json['costPrice'] ?? json['cost_price'] ?? 0).toDouble(),
+      depositAmount: (json['depositAmount'] ?? json['deposit_amount'] ?? 0).toDouble(),
+      refillPrice: (json['refillPrice'] ?? json['refill_price'] ?? 0).toDouble(),
       sku: json['sku'] ?? '',
       barcode: json['barcode'],
       description: json['description'],
-      images: List<String>.from(json['images'] ?? []),
+      images: json['images'] != null 
+          ? (json['images'] is List ? List<String>.from(json['images']) : [json['image_url']].where((e) => e != null).cast<String>().toList())
+          : [],
       supplier: json['supplier'] != null ? Supplier.fromJson(json['supplier']) : null,
-      inspectionRequired: json['inspectionRequired'] ?? false,
-      inspectionInterval: json['inspectionInterval'] ?? 60,
-      lastInspectionDate: json['lastInspectionDate'] != null 
-          ? DateTime.parse(json['lastInspectionDate'])
+      inspectionRequired: json['inspectionRequired'] ?? json['inspection_required'] ?? false,
+      inspectionInterval: json['inspectionInterval'] ?? json['inspection_interval'] ?? 60,
+      lastInspectionDate: json['lastInspectionDate'] ?? json['last_inspection_date'] != null 
+          ? DateTime.parse(json['lastInspectionDate'] ?? json['last_inspection_date'])
           : null,
-      nextInspectionDue: json['nextInspectionDue'] != null 
-          ? DateTime.parse(json['nextInspectionDue'])
+      nextInspectionDue: json['nextInspectionDue'] ?? json['next_inspection_due'] != null 
+          ? DateTime.parse(json['nextInspectionDue'] ?? json['next_inspection_due'])
           : null,
-      certificationNumber: json['certificationNumber'],
-      tags: List<String>.from(json['tags'] ?? []),
+      certificationNumber: json['certificationNumber'] ?? json['certification_number'],
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
       discount: (json['discount'] ?? 0).toDouble(),
-      isActive: json['isActive'] ?? true,
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
       notes: json['notes'],
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       '_id': id,
       'name': name,
       'brand': brand,

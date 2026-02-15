@@ -57,45 +57,46 @@ class LPGCustomer {
 
   factory LPGCustomer.fromJson(Map<String, dynamic> json) {
     return LPGCustomer(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
       email: json['email'],
       phone: json['phone'] ?? '',
-      alternatePhone: json['alternatePhone'],
-      customerType: json['customerType'] ?? 'Individual',
-      businessName: json['businessName'],
-      gstNumber: json['gstNumber'],
+      alternatePhone: json['alternatePhone'] ?? json['alternate_phone'],
+      customerType: json['customerType'] ?? json['customer_type'] ?? 'Individual',
+      businessName: json['businessName'] ?? json['business_name'],
+      gstNumber: json['gstNumber'] ?? json['gst_number'],
       premises: (json['premises'] as List<dynamic>? ?? [])
           .map((p) => Premises.fromJson(p))
           .toList(),
-      refillHistory: (json['refillHistory'] as List<dynamic>? ?? [])
+      refillHistory: (json['refillHistory'] ?? json['refill_history'] as List<dynamic>? ?? [])
           .map((h) => CylinderRefillHistory.fromJson(h))
           .toList(),
-      loyaltyPoints: json['loyaltyPoints'] ?? 0,
-      loyaltyTier: json['loyaltyTier'] ?? 'Bronze',
-      totalSpent: (json['totalSpent'] ?? 0).toDouble(),
-      totalRefills: json['totalRefills'] ?? 0,
-      creditLimit: (json['creditLimit'] ?? 0).toDouble(),
-      currentCredit: (json['currentCredit'] ?? 0).toDouble(),
-      preferredDeliveryTime: json['preferredDeliveryTime'] ?? 'Anytime',
-      deliveryInstructions: json['deliveryInstructions'],
-      safetyTrainingCompleted: json['safetyTrainingCompleted'] ?? false,
-      safetyTrainingDate: json['safetyTrainingDate'] != null
-          ? DateTime.parse(json['safetyTrainingDate'])
+      loyaltyPoints: json['loyaltyPoints'] ?? json['loyalty_points'] ?? 0,
+      loyaltyTier: json['loyaltyTier'] ?? json['loyalty_tier'] ?? 'Bronze',
+      totalSpent: (json['totalSpent'] ?? json['total_spent'] ?? 0).toDouble(),
+      totalRefills: json['totalRefills'] ?? json['total_refills'] ?? 0,
+      creditLimit: (json['creditLimit'] ?? json['credit_limit'] ?? 0).toDouble(),
+      currentCredit: (json['currentCredit'] ?? json['current_credit'] ?? 0).toDouble(),
+      preferredDeliveryTime: json['preferredDeliveryTime'] ?? json['preferred_delivery_time'] ?? 'Anytime',
+      deliveryInstructions: json['deliveryInstructions'] ?? json['delivery_instructions'],
+      safetyTrainingCompleted: json['safetyTrainingCompleted'] ?? json['safety_training_completed'] ?? false,
+      safetyTrainingDate: json['safetyTrainingDate'] ?? json['safety_training_date'] != null
+          ? DateTime.parse(json['safetyTrainingDate'] ?? json['safety_training_date'])
           : null,
-      emergencyContact: json['emergencyContact'] != null
-          ? EmergencyContact.fromJson(json['emergencyContact'])
+      emergencyContact: json['emergencyContact'] ?? json['emergency_contact'] != null
+          ? EmergencyContact.fromJson(json['emergencyContact'] ?? json['emergency_contact'])
           : null,
       notes: json['notes'],
-      isActive: json['isActive'] ?? true,
-      tags: List<String>.from(json['tags'] ?? []),
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
+      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       '_id': id,
       'name': name,
       'email': email,
@@ -284,21 +285,22 @@ class Premises {
 
   factory Premises.fromJson(Map<String, dynamic> json) {
     return Premises(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
-      type: json['type'] ?? 'Residential',
+      type: json['type'] ?? json['premises_type'] ?? 'Residential',
       address: Address.fromJson(json['address'] ?? {}),
-      connectionType: json['connectionType'] ?? 'Direct',
-      cylinderCapacity: json['cylinderCapacity'] ?? '11.8kg',
-      estimatedMonthlyConsumption: (json['estimatedMonthlyConsumption'] ?? 0).toDouble(),
-      deliveryInstructions: json['deliveryInstructions'],
-      isActive: json['isActive'] ?? true,
-      isPrimary: json['isPrimary'] ?? false,
+      connectionType: json['connectionType'] ?? json['connection_type'] ?? 'Direct',
+      cylinderCapacity: json['cylinderCapacity'] ?? json['cylinder_capacity'] ?? '11.8kg',
+      estimatedMonthlyConsumption: (json['estimatedMonthlyConsumption'] ?? json['estimated_monthly_consumption'] ?? 0).toDouble(),
+      deliveryInstructions: json['deliveryInstructions'] ?? json['delivery_instructions'],
+      isActive: json['isActive'] ?? json['is_active'] ?? true,
+      isPrimary: json['isPrimary'] ?? json['is_primary'] ?? false,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       '_id': id,
       'name': name,
       'type': type,
@@ -392,29 +394,30 @@ class CylinderRefillHistory {
 
   factory CylinderRefillHistory.fromJson(Map<String, dynamic> json) {
     return CylinderRefillHistory(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       premises: json['premises'] ?? '',
-      cylinderType: json['cylinderType'] ?? '',
-      cylinderSerialNumber: json['cylinderSerialNumber'],
-      refillDate: DateTime.parse(json['refillDate'] ?? DateTime.now().toIso8601String()),
+      cylinderType: json['cylinderType'] ?? json['cylinder_type'] ?? '',
+      cylinderSerialNumber: json['cylinderSerialNumber'] ?? json['cylinder_serial_number'],
+      refillDate: DateTime.parse(json['refillDate'] ?? json['refill_date'] ?? DateTime.now().toIso8601String()),
       quantity: json['quantity'] ?? 0,
-      pricePerUnit: (json['pricePerUnit'] ?? 0).toDouble(),
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
-      depositAmount: (json['depositAmount'] ?? 0).toDouble(),
-      refundAmount: (json['refundAmount'] ?? 0).toDouble(),
-      paymentMethod: json['paymentMethod'] ?? 'Cash',
-      deliveryAddress: json['deliveryAddress'],
-      deliveryStatus: json['deliveryStatus'] ?? 'Delivered',
-      deliveryDate: json['deliveryDate'] != null
-          ? DateTime.parse(json['deliveryDate'])
+      pricePerUnit: (json['pricePerUnit'] ?? json['price_per_unit'] ?? json['unit_price'] ?? 0).toDouble(),
+      totalAmount: (json['totalAmount'] ?? json['total_amount'] ?? json['amount'] ?? 0).toDouble(),
+      depositAmount: (json['depositAmount'] ?? json['deposit_amount'] ?? 0).toDouble(),
+      refundAmount: (json['refundAmount'] ?? json['refund_amount'] ?? 0).toDouble(),
+      paymentMethod: json['paymentMethod'] ?? json['payment_method'] ?? 'Cash',
+      deliveryAddress: json['deliveryAddress'] ?? json['delivery_address'],
+      deliveryStatus: json['deliveryStatus'] ?? json['delivery_status'] ?? 'Delivered',
+      deliveryDate: json['deliveryDate'] ?? json['delivery_date'] != null
+          ? DateTime.parse(json['deliveryDate'] ?? json['delivery_date'])
           : null,
       notes: json['notes'],
-      soldBy: json['soldBy'] ?? '',
+      soldBy: json['soldBy'] ?? json['sold_by'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       '_id': id,
       'premises': premises,
       'cylinderType': cylinderType,

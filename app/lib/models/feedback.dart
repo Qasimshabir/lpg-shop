@@ -31,28 +31,29 @@ class Feedback {
 
   factory Feedback.fromJson(Map<String, dynamic> json) {
     return Feedback(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       category: json['category'] ?? 'general',
-      title: json['title'] ?? '',
+      title: json['title'] ?? json['subject'] ?? '',
       message: json['message'] ?? '',
       priority: json['priority'] ?? 'medium',
       status: json['status'] ?? 'pending',
-      adminResponse: json['adminResponse'],
-      responseDate: json['responseDate'] != null 
-          ? DateTime.parse(json['responseDate'])
+      adminResponse: json['adminResponse'] ?? json['admin_response'] ?? json['response'],
+      responseDate: json['responseDate'] ?? json['response_date'] ?? json['responded_at'] != null 
+          ? DateTime.parse(json['responseDate'] ?? json['response_date'] ?? json['responded_at'])
           : null,
-      screenshots: List<String>.from(json['screenshots'] ?? []),
-      deviceInfo: json['deviceInfo'] != null 
-          ? DeviceInfo.fromJson(json['deviceInfo'])
+      screenshots: json['screenshots'] != null ? List<String>.from(json['screenshots']) : [],
+      deviceInfo: json['deviceInfo'] ?? json['device_info'] != null 
+          ? DeviceInfo.fromJson(json['deviceInfo'] ?? json['device_info'])
           : null,
-      isPublic: json['isPublic'] ?? false,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      isPublic: json['isPublic'] ?? json['is_public'] ?? false,
+      createdAt: DateTime.parse(json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: DateTime.parse(json['updatedAt'] ?? json['updated_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       '_id': id,
       'category': category,
       'title': title,

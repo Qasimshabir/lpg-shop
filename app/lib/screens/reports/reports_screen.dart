@@ -105,7 +105,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Expanded(
                   child: _buildStatBox(
                     'Revenue',
-                    'Rs. ${totalRevenue.toStringAsFixed(0)}',
+                    '₹${totalRevenue.toStringAsFixed(0)}',
                     Icons.attach_money,
                     LPGColors.success,
                   ),
@@ -115,7 +115,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             SizedBox(height: 12),
             _buildStatBox(
               'Average Sale',
-              'Rs. ${avgSale.toStringAsFixed(0)}',
+              '₹${avgSale.toStringAsFixed(0)}',
               Icons.trending_up,
               LPGColors.info,
             ),
