@@ -9,6 +9,14 @@ const createChecklist = async (req, res, next) => {
   res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
+const checkItem = async (req, res, next) => {
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+};
+
+const addAcknowledgment = async (req, res, next) => {
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+};
+
 const updateChecklist = async (req, res, next) => {
   res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
@@ -21,10 +29,22 @@ const getIncidents = async (req, res, next) => {
   res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
+const updateIncidentStatus = async (req, res, next) => {
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+};
+
+const getComplianceReport = async (req, res, next) => {
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
+};
+
 module.exports = {
   getChecklistForSale,
   createChecklist,
+  checkItem,
+  addAcknowledgment,
   updateChecklist,
   reportIncident,
-  getIncidents
+  getIncidents,
+  updateIncidentStatus,
+  getComplianceReport
 };
