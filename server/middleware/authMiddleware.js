@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { getSupabaseClient } = require('../config/supabase');
 
 // Protect routes - Authentication middleware
 const protect = async (req, res, next) => {
@@ -13,16 +13,29 @@ const protect = async (req, res, next) => {
       // Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // Get user from token
-      req.user = await User.findById(decoded.id).select('-password');
+      // Get user from token using Supabase
+      const supabase = getSupabaseClient();
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id, name, email, phone, role_id, is_active')
+        .eq('id', decoded.id)
+        .single();
 
-      if (!req.user) {
+      if (error || !user) {
         return res.status(401).json({
           success: false,
           message: 'User not found'
         });
       }
 
+      if (!user.is_active) {
+        return res.status(401).json({
+          success: false,
+          message: 'Account is deactivated'
+        });
+      }
+
+      req.user = user;
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
@@ -31,17 +44,13 @@ const protect = async (req, res, next) => {
         message: 'Not authorized, token failed'
       });
     }
-  }
-
-  if (!token) {
+  } else {
     return res.status(401).json({
       success: false,
       message: 'Not authorized, no token'
     });
   }
 };
-
-
 
 // Generate JWT Token
 const generateToken = (id) => {

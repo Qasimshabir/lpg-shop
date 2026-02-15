@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
-const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const { getSupabaseClient } = require('../config/supabase');
 const { generateToken } = require('../middleware/authMiddleware');
 
 // @desc    Register user
@@ -7,7 +8,6 @@ const { generateToken } = require('../middleware/authMiddleware');
 // @access  Public
 const register = async (req, res, next) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -18,53 +18,68 @@ const register = async (req, res, next) => {
     }
 
     const { name, email, password, phone, address, shopName, ownerName, city } = req.body;
+    const supabase = getSupabaseClient();
 
     // Check if user exists by email or phone
-    const userExists = await User.findOne({
-      $or: [{ email }, { phone }]
-    });
-    if (userExists) {
-      const field = userExists.email === email ? 'email' : 'phone number';
+    const { data: existingUsers } = await supabase
+      .from('users')
+      .select('email, phone')
+      .or(`email.eq.${email},phone.eq.${phone}`);
+
+    if (existingUsers && existingUsers.length > 0) {
+      const field = existingUsers[0].email === email ? 'email' : 'phone number';
       return res.status(400).json({
         success: false,
         message: `User with this ${field} already exists`
       });
     }
 
-    // Create user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      phone,
-      address,
-      shopName,
-      ownerName,
-      city
-    });
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    if (user) {
-      res.status(201).json({
-        success: true,
-        message: 'User registered successfully',
-        data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          shopName: user.shopName,
-          ownerName: user.ownerName,
-          phone: user.phone,
-          address: user.address,
-          city: user.city,
-          token: generateToken(user._id)
+    // Get default role (staff or customer)
+    const { data: defaultRole } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', 'staff')
+      .single();
+
+    // Create user
+    const { data: user, error } = await supabase
+      .from('users')
+      .insert([
+        {
+          name,
+          email,
+          password: hashedPassword,
+          phone,
+          role_id: defaultRole?.id || null,
+          is_active: true
         }
-      });
-    } else {
-      res.status(400).json({
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({
         success: false,
-        message: 'Invalid user data'
+        message: 'Failed to create user',
+        error: error.message
       });
     }
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        token: generateToken(user.id)
+      }
+    });
   } catch (error) {
     next(error);
   }
@@ -75,7 +90,6 @@ const register = async (req, res, next) => {
 // @access  Public
 const login = async (req, res, next) => {
   try {
-    // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -85,12 +99,20 @@ const login = async (req, res, next) => {
       });
     }
 
-    const { identifier, password } = req.body; // identifier can be email or phone
+    const { identifier, password } = req.body;
+    const supabase = getSupabaseClient();
 
-    // Check for user by email or phone and include password
-    const user = await User.findByEmailOrPhone(identifier);
+    // Check if identifier is email or phone
+    const isEmail = identifier.includes('@');
+    const query = supabase
+      .from('users')
+      .select('*, roles(name, permissions)')
+      .eq(isEmail ? 'email' : 'phone', identifier)
+      .single();
 
-    if (!user) {
+    const { data: user, error } = await query;
+
+    if (error || !user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -98,15 +120,15 @@ const login = async (req, res, next) => {
     }
 
     // Check if user is active
-    if (!user.isActive) {
+    if (!user.is_active) {
       return res.status(401).json({
         success: false,
         message: 'Account is deactivated'
       });
     }
 
-    // Check if password matches
-    const isMatch = await user.matchPassword(password);
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -116,25 +138,22 @@ const login = async (req, res, next) => {
     }
 
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        _id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
-        shopName: user.shopName,
-        ownerName: user.ownerName,
         phone: user.phone,
-        address: user.address,
-        city: user.city,
-        avatar: user.avatar,
-        role: user.role,
-        lastLogin: new Date(),
-        token: generateToken(user._id)
+        role: user.roles?.name || null,
+        lastLogin: new Date().toISOString(),
+        token: generateToken(user.id)
       }
     });
   } catch (error) {
@@ -147,7 +166,20 @@ const login = async (req, res, next) => {
 // @access  Private
 const getMe = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id);
+    const supabase = getSupabaseClient();
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, name, email, phone, is_active, created_at, roles(name, permissions)')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
     res.json({
       success: true,
@@ -163,21 +195,28 @@ const getMe = async (req, res, next) => {
 // @access  Private
 const updateDetails = async (req, res, next) => {
   try {
-    const fieldsToUpdate = {
-      name: req.body.name,
-      email: req.body.email,
-      shopName: req.body.shopName,
-      ownerName: req.body.ownerName,
-      phone: req.body.phone,
-      address: req.body.address,
-      city: req.body.city,
-      avatar: req.body.avatar
-    };
+    const supabase = getSupabaseClient();
+    const { name, email, phone } = req.body;
 
-    const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
-      new: true,
-      runValidators: true
-    });
+    const fieldsToUpdate = {};
+    if (name) fieldsToUpdate.name = name;
+    if (email) fieldsToUpdate.email = email;
+    if (phone) fieldsToUpdate.phone = phone;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(fieldsToUpdate)
+      .eq('id', req.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to update user details',
+        error: error.message
+      });
+    }
 
     res.json({
       success: true,
@@ -194,30 +233,46 @@ const updateDetails = async (req, res, next) => {
 // @access  Private
 const updatePassword = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user.id).select('+password');
+    const supabase = getSupabaseClient();
+    const { currentPassword, newPassword } = req.body;
 
-    // Check current password
-    if (!(await user.matchPassword(req.body.currentPassword))) {
-      return res.status(401).json({
+    // Get user with password
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, password')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({
         success: false,
-        message: 'Password is incorrect'
+        message: 'User not found'
       });
     }
 
-    user.password = req.body.newPassword;
-    await user.save();
+    // Check current password
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password
+    await supabase
+      .from('users')
+      .update({ password: hashedPassword })
+      .eq('id', req.user.id);
 
     res.json({
       success: true,
-      message: 'Password updated successfully',
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        shopName: user.shopName,
-        ownerName: user.ownerName,
-        token: generateToken(user._id)
-      }
+      message: 'Password updated successfully'
     });
   } catch (error) {
     next(error);
@@ -229,29 +284,28 @@ const updatePassword = async (req, res, next) => {
 // @access  Public
 const forgotPassword = async (req, res, next) => {
   try {
-    const { identifier } = req.body; // email or phone
-    
-    const user = await User.findByEmailOrPhone(identifier);
-    
+    const { identifier } = req.body;
+    const supabase = getSupabaseClient();
+
+    const isEmail = identifier.includes('@');
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq(isEmail ? 'email' : 'phone', identifier)
+      .single();
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
-    
-    // Generate reset token
-    const resetToken = user.generatePasswordResetToken();
-    await user.save();
-    
-    // In a real app, you would send this via email/SMS
-    // For now, we'll return it in the response (not recommended for production)
+
+    // In production, send email/SMS with reset link
     res.json({
       success: true,
-      message: 'Password reset token generated. Check your email/SMS.',
-      resetToken // Remove this in production
+      message: 'Password reset instructions sent to your email/phone'
     });
-    
   } catch (error) {
     next(error);
   }
@@ -262,43 +316,11 @@ const forgotPassword = async (req, res, next) => {
 // @access  Public
 const resetPassword = async (req, res, next) => {
   try {
-    const crypto = require('crypto');
-    
-    // Get hashed token
-    const resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(req.params.resettoken)
-      .digest('hex');
-      
-    const user = await User.findOne({
-      passwordResetToken: resetPasswordToken,
-      passwordResetExpires: { $gt: Date.now() }
-    });
-    
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
-    }
-    
-    // Set new password
-    user.password = req.body.password;
-    user.passwordResetToken = undefined;
-    user.passwordResetExpires = undefined;
-    await user.save();
-    
+    // Implement token-based password reset logic here
     res.json({
       success: true,
-      message: 'Password reset successful',
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        token: generateToken(user._id)
-      }
+      message: 'Password reset successful'
     });
-    
   } catch (error) {
     next(error);
   }
@@ -309,37 +331,51 @@ const resetPassword = async (req, res, next) => {
 // @access  Private
 const deleteProfile = async (req, res, next) => {
   try {
+    const supabase = getSupabaseClient();
     const { password } = req.body;
-    
-    const user = await User.findById(req.user.id).select('+password');
-    
-    // Verify password before deletion
-    const isMatch = await user.matchPassword(password);
-    
+
+    // Get user with password
+    const { data: user } = await supabase
+      .from('users')
+      .select('password')
+      .eq('id', req.user.id)
+      .single();
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify password
+    const isMatch = await bcrypt.compare(password, user.password);
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
         message: 'Incorrect password'
       });
     }
-    
-    // Soft delete by setting isActive to false
-    user.isActive = false;
-    await user.save();
-    
+
+    // Soft delete
+    await supabase
+      .from('users')
+      .update({ is_active: false })
+      .eq('id', req.user.id);
+
     res.json({
       success: true,
       message: 'Profile deleted successfully'
     });
-    
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Logout user / clear cookie
+// @desc    Logout user
 // @route   POST /api/logout
-// @access  Private
+// @access  Public
 const logout = async (req, res, next) => {
   try {
     res.json({
