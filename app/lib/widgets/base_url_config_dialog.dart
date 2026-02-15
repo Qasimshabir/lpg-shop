@@ -141,197 +141,253 @@ class _BaseUrlConfigDialogState extends State<BaseUrlConfigDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.settings, color: Color(0xFF2C3E50)),
-          const SizedBox(width: 8),
-          const Text('Configure Base URL'),
-        ],
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      content: ConstrainedBox(
+      child: Container(
         constraints: const BoxConstraints(
           maxWidth: 400,
-          minWidth: 300,
+          maxHeight: 600,
         ),
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Enter the API server URL:',
-                  style: TextStyle(fontSize: 14, color: Colors.black87),
-                ),
-                const SizedBox(height: 16),
-                
-                // URL Input Field
-                TextFormField(
-                  controller: _urlController,
-                  decoration: InputDecoration(
-                    labelText: 'Base URL',
-                    hintText: 'http://192.168.1.100:5000',
-                    prefixIcon: const Icon(Icons.link),
-                    border: const OutlineInputBorder(),
-                    helperText: 'Example: http://192.168.1.100:5000',
-                    errorText: _errorMessage,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 16,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 14),
-                  maxLines: 2,
-                  minLines: 1,
-                  keyboardType: TextInputType.url,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter a URL';
-                    }
-                    
-                    if (!SettingsService.isValidUrl(value.trim())) {
-                      return 'Please enter a valid URL (http:// or https://)';
-                    }
-                    
-                    return null;
-                  },
-                  enabled: !_isLoading,
-                ),
-                const SizedBox(height: 16),
-                
-                // Advanced Options Toggle
-                InkWell(
-                  onTap: () {
-                    setState(() => _showAdvanced = !_showAdvanced);
-                  },
-                  child: Row(
-                    children: [
-                      Icon(
-                        _showAdvanced ? Icons.expand_less : Icons.expand_more,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'Advanced Options',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF3498DB),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Advanced Options
-                if (_showAdvanced) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Common Configurations:',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildQuickOption('Localhost', 'http://localhost:5000'),
-                        _buildQuickOption('Local Network', 'http://192.168.1.100:5000'),
-                        _buildQuickOption('Production', 'https://api.example.com'),
-                      ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  const Icon(Icons.settings, color: Color(0xFF2C3E50)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Configure Base URL',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
-                
-                const SizedBox(height: 16),
-                
-                // Info Box
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue[200]!),
-                  ),
-                  child: Row(
+              ),
+            ),
+            const Divider(height: 1),
+            
+            // Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'The URL will be automatically formatted to include /api',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue[900],
+                      const Text(
+                        'Enter the API server URL:',
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Format: http://YOUR_IP:5000 (without /api)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // URL Input Field
+                      TextFormField(
+                        controller: _urlController,
+                        decoration: InputDecoration(
+                          labelText: 'Base URL',
+                          hintText: 'http://10.141.196.72:5000',
+                          prefixIcon: const Icon(Icons.link),
+                          border: const OutlineInputBorder(),
+                          helperText: 'Example: http://10.141.196.72:5000',
+                          errorText: _errorMessage,
+                        ),
+                        style: const TextStyle(fontSize: 13),
+                        maxLines: 3,
+                        minLines: 1,
+                        keyboardType: TextInputType.url,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a URL';
+                          }
+                          
+                          if (!SettingsService.isValidUrl(value.trim())) {
+                            return 'Please enter a valid URL (http:// or https://)';
+                          }
+                          
+                          return null;
+                        },
+                        enabled: !_isLoading,
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Advanced Options Toggle
+                      InkWell(
+                        onTap: () {
+                          setState(() => _showAdvanced = !_showAdvanced);
+                        },
+                        child: Row(
+                          children: [
+                            Icon(
+                              _showAdvanced ? Icons.expand_less : Icons.expand_more,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Advanced Options',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF3498DB),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      // Advanced Options
+                      if (_showAdvanced) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
                           ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Common Configurations:',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildQuickOption('Localhost', 'http://localhost:5000'),
+                              _buildQuickOption('Current Network', 'http://10.141.196.72:5000'),
+                              _buildQuickOption('Local Network', 'http://192.168.1.100:5000'),
+                            ],
+                          ),
+                        ),
+                      ],
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Info Box
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.blue[50],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue[200]!),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Important Information',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue[900],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '• Enter only the base URL (e.g., http://10.141.196.72:5000)\n'
+                              '• /api will be added automatically\n'
+                              '• Make sure your server is running on port 5000\n'
+                              '• Use your computer\'s IP address for mobile devices',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.blue[900],
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+            
+            // Actions
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: [
+                  // Reset Button
+                  TextButton.icon(
+                    onPressed: _isLoading ? null : _resetToDefault,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const Text('Reset', style: TextStyle(fontSize: 13)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.orange,
+                    ),
+                  ),
+                  
+                  // Test Connection Button
+                  TextButton.icon(
+                    onPressed: _isLoading ? null : _testConnection,
+                    icon: const Icon(Icons.wifi_tethering, size: 16),
+                    label: const Text('Test', style: TextStyle(fontSize: 13)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF3498DB),
+                    ),
+                  ),
+                  
+                  // Cancel Button
+                  TextButton(
+                    onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel', style: TextStyle(fontSize: 13)),
+                  ),
+                  
+                  // Save Button
+                  ElevatedButton.icon(
+                    onPressed: _isLoading ? null : _saveUrl,
+                    icon: _isLoading
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Icon(Icons.save, size: 16),
+                    label: Text(
+                      _isLoading ? 'Saving...' : 'Save',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2C3E50),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
-      actions: [
-        // Reset Button
-        TextButton.icon(
-          onPressed: _isLoading ? null : _resetToDefault,
-          icon: const Icon(Icons.refresh, size: 18),
-          label: const Text('Reset'),
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.orange,
-          ),
-        ),
-        
-        // Test Connection Button
-        TextButton.icon(
-          onPressed: _isLoading ? null : _testConnection,
-          icon: const Icon(Icons.wifi_tethering, size: 18),
-          label: const Text('Test'),
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF3498DB),
-          ),
-        ),
-        
-        // Cancel Button
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
-        ),
-        
-        // Save Button
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : _saveUrl,
-          icon: _isLoading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                )
-              : const Icon(Icons.save, size: 18),
-          label: Text(_isLoading ? 'Saving...' : 'Save'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF2C3E50),
-            foregroundColor: Colors.white,
-          ),
-        ),
-      ],
     );
   }
 
