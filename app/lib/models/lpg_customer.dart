@@ -1,3 +1,5 @@
+import '../utils/logger.dart';
+
 class LPGCustomer {
   final String id;
   final String name;
@@ -56,6 +58,31 @@ class LPGCustomer {
   });
 
   factory LPGCustomer.fromJson(Map<String, dynamic> json) {
+    // Parse premises
+    List<Premises> premisesList = [];
+    try {
+      if (json['premises'] != null) {
+        premisesList = (json['premises'] as List<dynamic>)
+            .map((p) => Premises.fromJson(p as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to parse premises', e);
+    }
+
+    // Parse refill history
+    List<CylinderRefillHistory> refillHistoryList = [];
+    try {
+      final refillData = json['refillHistory'] ?? json['refill_history'];
+      if (refillData != null && refillData is List) {
+        refillHistoryList = refillData
+            .map((h) => CylinderRefillHistory.fromJson(h as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to parse refill history', e);
+    }
+
     return LPGCustomer(
       id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
@@ -65,12 +92,8 @@ class LPGCustomer {
       customerType: json['customerType'] ?? json['customer_type'] ?? 'Individual',
       businessName: json['businessName'] ?? json['business_name'],
       gstNumber: json['gstNumber'] ?? json['gst_number'],
-      premises: (json['premises'] as List<dynamic>? ?? [])
-          .map((p) => Premises.fromJson(p))
-          .toList(),
-      refillHistory: (json['refillHistory'] ?? json['refill_history'] as List<dynamic>? ?? [])
-          .map((h) => CylinderRefillHistory.fromJson(h))
-          .toList(),
+      premises: premisesList,
+      refillHistory: refillHistoryList,
       loyaltyPoints: json['loyaltyPoints'] ?? json['loyalty_points'] ?? 0,
       loyaltyTier: json['loyaltyTier'] ?? json['loyalty_tier'] ?? 'Bronze',
       totalSpent: (json['totalSpent'] ?? json['total_spent'] ?? 0).toDouble(),
@@ -284,11 +307,25 @@ class Premises {
   });
 
   factory Premises.fromJson(Map<String, dynamic> json) {
+    // Parse address safely
+    Address address;
+    try {
+      address = Address.fromJson(json['address'] ?? {});
+    } catch (e) {
+      AppLogger.warning('Failed to parse address, using default', e);
+      address = Address(
+        street: json['address']?.toString() ?? '',
+        city: json['city'] ?? '',
+        state: json['state'] ?? '',
+        pincode: json['postal_code'] ?? json['pincode'] ?? '',
+      );
+    }
+
     return Premises(
       id: json['id'] ?? json['_id'] ?? '',
       name: json['name'] ?? '',
       type: json['type'] ?? json['premises_type'] ?? 'Residential',
-      address: Address.fromJson(json['address'] ?? {}),
+      address: address,
       connectionType: json['connectionType'] ?? json['connection_type'] ?? 'Direct',
       cylinderCapacity: json['cylinderCapacity'] ?? json['cylinder_capacity'] ?? '11.8kg',
       estimatedMonthlyConsumption: (json['estimatedMonthlyConsumption'] ?? json['estimated_monthly_consumption'] ?? 0).toDouble(),

@@ -41,8 +41,8 @@ class _SalesScreenState extends State<SalesScreen> {
       
       double total = 0;
       for (var sale in sales) {
-        final saleTotal = (sale['total'] ?? sale['totalAmount'] ?? 0);
-        AppLogger.debug('Sale ${sale['_id']}: total=$saleTotal, keys=${sale.keys.toList()}');
+        final saleTotal = (sale['total'] ?? sale['totalAmount'] ?? sale['total_amount'] ?? 0);
+        AppLogger.debug('Sale ${sale['id']}: total=$saleTotal, keys=${sale.keys.toList()}');
         total += (saleTotal as num).toDouble();
       }
       
@@ -177,10 +177,11 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Widget _buildSaleCard(Map<String, dynamic> sale) {
-    final date = DateTime.parse(sale['createdAt'] ?? DateTime.now().toIso8601String());
-    final amount = (sale['total'] ?? sale['totalAmount'] ?? 0).toDouble();
-    final items = sale['items'] as List? ?? [];
-    final customerName = sale['customer']?['name'] ?? 'Walk-in Customer';
+    final date = DateTime.parse(sale['createdAt'] ?? sale['created_at'] ?? sale['sale_date'] ?? DateTime.now().toIso8601String());
+    final amount = (sale['total'] ?? sale['totalAmount'] ?? sale['total_amount'] ?? 0).toDouble();
+    final items = (sale['items'] ?? sale['sale_items']) as List? ?? [];
+    final customer = sale['customer'] ?? sale['lpg_customers'];
+    final customerName = customer != null ? (customer['name'] ?? 'Walk-in Customer') : 'Walk-in Customer';
 
     return Card(
       margin: EdgeInsets.only(bottom: 12),
