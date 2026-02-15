@@ -294,28 +294,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
               'Daily Report',
               'View today\'s performance',
               Icons.today,
-              () => _showComingSoon('Daily Report'),
+              () => _generateDailyReport(),
             ),
             SizedBox(height: 12),
             _buildReportButton(
               'Weekly Report',
               'Last 7 days analysis',
               Icons.date_range,
-              () => _showComingSoon('Weekly Report'),
+              () => _generateWeeklyReport(),
             ),
             SizedBox(height: 12),
             _buildReportButton(
               'Monthly Report',
               'Current month summary',
               Icons.calendar_month,
-              () => _showComingSoon('Monthly Report'),
+              () => _generateMonthlyReport(),
             ),
             SizedBox(height: 12),
             _buildReportButton(
               'Custom Report',
               'Generate custom date range',
               Icons.analytics,
-              () => _showComingSoon('Custom Report'),
+              () => _showCustomReportDialog(),
             ),
           ],
         ),
@@ -367,6 +367,194 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$feature - Coming Soon!'), backgroundColor: LPGColors.info),
     );
+  }
+
+  Future<void> _generateDailyReport() async {
+    final today = DateTime.now();
+    final startDate = DateTime(today.year, today.month, today.day).toIso8601String();
+    final endDate = DateTime(today.year, today.month, today.day, 23, 59, 59).toIso8601String();
+    
+    await _showReportDetails('Daily Report', startDate, endDate);
+  }
+
+  Future<void> _generateWeeklyReport() async {
+    final today = DateTime.now();
+    final startDate = today.subtract(Duration(days: 7)).toIso8601String();
+    final endDate = today.toIso8601String();
+    
+    await _showReportDetails('Weekly Report', startDate, endDate);
+  }
+
+  Future<void> _generateMonthlyReport() async {
+    final today = DateTime.now();
+    final startDate = DateTime(today.year, today.month, 1).toIso8601String();
+    final endDate = today.toIso8601String();
+    
+    await _showReportDetails('Monthly Report', startDate, endDate);
+  }
+
+  Future<void> _showCustomReportDialog() async {
+    DateTime? startDate;
+    DateTime? endDate;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Custom Report'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Start Date'),
+                subtitle: Text(
+                  startDate != null
+                      ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
+                      : 'Select start date',
+                ),
+                trailing: Icon(Icons.calendar_today),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: startDate ?? DateTime.now().subtract(Duration(days: 30)),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => startDate = picked);
+                  }
+                },
+              ),
+              ListTile(
+                title: Text('End Date'),
+                subtitle: Text(
+                  endDate != null
+                      ? '${endDate!.day}/${endDate!.month}/${endDate!.year}'
+                      : 'Select end date',
+                ),
+                trailing: Icon(Icons.calendar_today),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: endDate ?? DateTime.now(),
+                    firstDate: startDate ?? DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) {
+                    setDialogState(() => endDate = picked);
+                  }
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: startDate != null && endDate != null
+                  ? () {
+                      Navigator.pop(context);
+                      _showReportDetails(
+                        'Custom Report',
+                        startDate!.toIso8601String(),
+                        endDate!.toIso8601String(),
+                      );
+                    }
+                  : null,
+              child: Text('Generate'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showReportDetails(String title, String startDate, String endDate) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(child: CircularProgressIndicator()),
+      );
+
+      final report = await LPGApiService.getSalesReport(
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      // Show report details
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildReportRow('Period', '${_formatDate(startDate)} - ${_formatDate(endDate)}'),
+                  Divider(),
+                  Text('Sales Summary', style: LPGTextStyles.subtitle1),
+                  SizedBox(height: 8),
+                  _buildReportRow('Total Sales', '${report['summary']?['totalSales'] ?? 0}'),
+                  _buildReportRow('Total Revenue', '₹${((report['summary']?['totalRevenue'] ?? 0) as num).toStringAsFixed(2)}'),
+                  _buildReportRow('Average Sale', '₹${((report['summary']?['avgSaleValue'] ?? 0) as num).toStringAsFixed(2)}'),
+                  Divider(),
+                  Text('Payment Status', style: LPGTextStyles.subtitle1),
+                  SizedBox(height: 8),
+                  _buildReportRow('Paid', '${report['paymentStatus']?['paid'] ?? 0}'),
+                  _buildReportRow('Pending', '${report['paymentStatus']?['pending'] ?? 0}'),
+                  _buildReportRow('Failed', '${report['paymentStatus']?['failed'] ?? 0}'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Export feature coming soon!')),
+                  );
+                },
+                icon: Icon(Icons.download),
+                label: Text('Export'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context); // Close loading dialog
+      _showError('Failed to generate report: $e');
+    }
+  }
+
+  Widget _buildReportRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: LPGTextStyles.body2),
+          Text(value, style: LPGTextStyles.body1.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(String isoDate) {
+    final date = DateTime.parse(isoDate);
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   void _showError(String message) {
