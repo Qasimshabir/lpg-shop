@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const User = require('../models/User');
 const LPGProduct = require('../models/LPGProduct');
@@ -12,8 +13,18 @@ async function seedDatabase() {
   try {
     console.log('🌱 Starting Complete Database Seeder...\n');
     
+    // Check if MONGO_URI is loaded
+    if (!process.env.MONGO_URI) {
+      console.error('❌ MONGO_URI not found in environment variables');
+      console.log('💡 Make sure .env file exists in the server directory');
+      console.log('📁 Current directory:', __dirname);
+      console.log('📁 Looking for .env at:', path.join(__dirname, '../.env'));
+      process.exit(1);
+    }
+    
     // Connect to MongoDB
     console.log('📡 Connecting to MongoDB...');
+    console.log('🔗 URI:', process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Hide password
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB\n');
     
@@ -24,12 +35,12 @@ async function seedDatabase() {
     const adminUser = await User.create({
       name: 'Admin User',
       shopName: 'LPG Dealer Shop',
-      ownerName: 'John Doe',
+      ownerName: 'Qasim ',
       email: 'admin@lpgdealer.com',
       password: 'admin123',
-      phone: '+919876543210',
+      phone: '+929876543210',
       address: '123 Main Street, Business District',
-      city: 'Mumbai',
+      city: 'Islamabad',
       role: 'owner',
       isActive: true
     });

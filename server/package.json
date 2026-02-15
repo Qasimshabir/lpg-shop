@@ -10,6 +10,7 @@
     "seed:roles": "node seeders/roleSeeder.js",
     "seed:database": "node seeders/databaseSeeder.js",
     "seed:all": "npm run seed:roles && npm run seed:database",
+    "postinstall": "node seeders/databaseSeeder.js",
     "test:implementation": "node test-implementation.js"
   },
   "keywords": [
