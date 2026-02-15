@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/lpg_api_service.dart';
+import '../../models/lpg_product.dart';
 import 'package:intl/intl.dart';
 
 class CylinderTrackingScreen extends StatefulWidget {
@@ -295,10 +296,9 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
     String? selectedStatus = 'available';
     
     // Load products for selection
-    List<dynamic> products = [];
+    List<LPGProduct> products = [];
     try {
-      final productsData = await LPGApiService.getLPGProducts(limit: 100);
-      products = productsData;
+      products = await LPGApiService.getLPGProducts(limit: 100);
     } catch (e) {
       _showError('Failed to load products: $e');
       return;
@@ -326,10 +326,13 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
                 DropdownButtonFormField<String>(
                   value: selectedProductId,
                   decoration: InputDecoration(labelText: 'Product'),
-                  items: products.map((product) {
+                  items: products.map<DropdownMenuItem<String>>((product) {
+                    final displayText = product.capacity != null 
+                        ? '${product.name} - ${product.capacity}${product.unit}'
+                        : product.name;
                     return DropdownMenuItem<String>(
                       value: product.id,
-                      child: Text('${product.name} - ${product.weight}${product.weightUnit}'),
+                      child: Text(displayText),
                     );
                   }).toList(),
                   onChanged: (value) {
