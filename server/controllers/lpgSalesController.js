@@ -1,165 +1,100 @@
-const mongoose = require('mongoose');
-const LPGSale = require('../models/LPGSale');
-const LPGProduct = require('../models/LPGProduct');
-const LPGCustomer = require('../models/LPGCustomer');
-const Cylinder = require('../models/Cylinder');
-const SafetyChecklist = require('../models/SafetyChecklist');
+const { getSupabaseClient } = require('../config/supabase');
 
+// @desc    Create new LPG sale
+// @route   POST /api/sales
+// @access  Private
 const createLPGSale = async (req, res, next) => {
   try {
-    const { items, customer, deliveryRequired, deliveryAddress, paymentMethod, taxRate, discount, discountType, notes, saleType } = req.body;
+    const supabase = getSupabaseClient();
+    const { items, customer_id, payment_method, payment_status, delivery_status, delivery_address, notes } = req.body;
     
     // Validate items array
     if (!items || !Array.isArray(items) || items.length === 0) {
-      throw new Error('Items array is required and must not be empty');
-    }
-    
-    const reservedCylinders = [];
-    const processedItems = [];
-    
-    for (let item of items) {
-      const product = await LPGProduct.findOne({ 
-        _id: item.product, 
-        userId: req.user.id 
+      return res.status(400).json({
+        success: false,
+        message: 'Items array is required and must not be empty'
       });
+    }
+    
+    // Calculate total amount
+    let totalAmount = 0;
+    for (let item of items) {
+      totalAmount += (item.quantity * item.unit_price);
+    }
+    
+    // Generate invoice number
+    const invoiceNumber = `INV-${Date.now()}`;
+    
+    // Create sale
+    const { data: sale, error: saleError } = await supabase
+      .from('lpg_sales')
+      .insert([{
+        user_id: req.user.id,
+        invoice_number: invoiceNumber,
+        customer_id: customer_id || null,
+        sale_date: new Date().toISOString(),
+        total_amount: totalAmount,
+        payment_method: payment_method || 'Cash',
+        payment_status: payment_status || 'pending',
+        delivery_status: delivery_status || 'pending',
+        delivery_address: delivery_address || null,
+        notes: notes || null
+      }])
+      .select()
+      .single();
+    
+    if (saleError) throw saleError;
+    
+    // Create sale items
+    const saleItems = items.map(item => ({
+      sale_id: sale.id,
+      product_id: item.product_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      subtotal: item.quantity * item.unit_price
+    }));
+    
+    const { error: itemsError } = await supabase
+      .from('sale_items')
+      .insert(saleItems);
+    
+    if (itemsError) throw itemsError;
+    
+    // Update product stock
+    for (let item of items) {
+      const { data: product } = await supabase
+        .from('lpg_products')
+        .select('stock_quantity')
+        .eq('id', item.product_id)
+        .single();
       
-      if (!product) {
-        throw new Error(`Product not found: ${item.product}`);
-      }
-      
-      // Add productType and other required fields from the product
-      const processedItem = {
-        product: item.product,
-        productType: product.productType,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        subtotal: item.quantity * item.unitPrice
-      };
-      
-      // Add cylinder-specific fields if it's a cylinder
-      if (product.productType === 'cylinder') {
-        processedItem.cylinderType = product.cylinderType;
-        processedItem.isRefill = saleType === 'Refill';
-        processedItem.isExchange = saleType === 'Exchange';
-      }
-      
-      processedItems.push(processedItem);
-      
-      if (product.productType === 'cylinder') {
-        const availableCylinders = await Cylinder.find({
-          userId: req.user.id,
-          capacity: product.cylinderType,
-          status: 'in-stock',
-          isActive: true
-        }).limit(item.quantity);
-        
-        if (availableCylinders.length < item.quantity) {
-          throw new Error(
-            `Insufficient cylinders for ${product.name}. ` +
-            `Available: ${availableCylinders.length}, Requested: ${item.quantity}`
-          );
-        }
-        
-        reservedCylinders.push({
-          productId: item.product,
-          cylinders: availableCylinders.map(c => c.serialNumber)
-        });
-        
-        // Add cylinder serial numbers to the processed item
-        processedItem.cylinderSerialNumbers = availableCylinders.map(c => c.serialNumber);
-        
-        await Cylinder.updateMany(
-          { _id: { $in: availableCylinders.map(c => c._id) } },
-          { 
-            status: 'with-customer',
-            currentLocation: {
-              type: 'customer',
-              customerId: customer
-            }
-          }
-        );
-        
-        product.cylinderStates.filled -= item.quantity;
-        product.cylinderStates.sold += item.quantity;
-        await product.save();
-      } else {
-        if (product.stock < item.quantity) {
-          throw new Error(
-            `Insufficient stock for ${product.name}. ` +
-            `Available: ${product.stock}, Requested: ${item.quantity}`
-          );
-        }
-        
-        product.stock -= item.quantity;
-        await product.save();
+      if (product) {
+        await supabase
+          .from('lpg_products')
+          .update({ stock_quantity: product.stock_quantity - item.quantity })
+          .eq('id', item.product_id);
       }
     }
     
-    const sale = await LPGSale.create({
-      soldBy: req.user.id,
-      customer: customer || null,
-      customerType: customer ? 'registered' : 'walk-in',
-      items: processedItems,
-      paymentMethod: paymentMethod || 'Cash',
-      paidAmount: req.body.paidAmount || 0,
-      taxRate: taxRate || 0,
-      discount: discount || 0,
-      discountType: discountType || 'fixed',
-      deliveryRequired: deliveryRequired || false,
-      deliveryAddress: deliveryAddress || null,
-      saleType: saleType || 'New Sale',
-      notes: notes || '',
-      status: 'Completed'
-    });
-    
-    if (customer) {
-      await LPGCustomer.findByIdAndUpdate(
-        customer,
-        {
-          $inc: {
-            totalRefills: 1,
-            totalSpent: sale.total,
-            loyaltyPoints: Math.floor(sale.total / 100)
-          },
-          lastRefillDate: new Date()
-        }
-      );
-      
-      if (saleType === 'New Connection') {
-        await SafetyChecklist.create({
-          userId: req.user.id,
-          saleId: sale._id,
-          customerId: customer,
-          checklistType: 'new-connection',
-          items: SafetyChecklist.getTemplate('new-connection')
-        });
-      }
-    }
-    
-    // Populate the sale before returning
-    const populatedSale = await LPGSale.findById(sale._id)
-      .populate('customer', 'name phone email')
-      .populate('items.product', 'name brand category');
+    // Fetch complete sale with items
+    const { data: completeSale } = await supabase
+      .from('lpg_sales')
+      .select(`
+        *,
+        lpg_customers(name, phone, email),
+        sale_items(*, lpg_products(name, category))
+      `)
+      .eq('id', sale.id)
+      .single();
     
     res.status(201).json({
       success: true,
       message: 'Sale created successfully',
-      data: populatedSale
+      data: completeSale
     });
     
   } catch (error) {
     console.error('Sale creation error:', error);
-    
-    // Log detailed error for debugging
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(e => e.message);
-      return res.status(400).json({
-        success: false,
-        message: 'Validation failed',
-        errors: errors
-      });
-    }
-    
     res.status(400).json({
       success: false,
       message: error.message || 'Failed to create sale'
@@ -167,102 +102,125 @@ const createLPGSale = async (req, res, next) => {
   }
 };
 
+// @desc    Get all LPG sales
+// @route   GET /api/sales
+// @access  Private
 const getLPGSales = async (req, res, next) => {
   try {
-    const { startDate, endDate, customer, paymentStatus, deliveryStatus } = req.query;
+    const supabase = getSupabaseClient();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
     
-    const query = { soldBy: req.user.id };
+    let query = supabase
+      .from('lpg_sales')
+      .select(`
+        *,
+        lpg_customers(name, phone, email),
+        sale_items(*, lpg_products(name, category))
+      `, { count: 'exact' })
+      .eq('user_id', req.user.id);
     
-    if (startDate || endDate) {
-      query.createdAt = {};
-      if (startDate) query.createdAt.$gte = new Date(startDate);
-      if (endDate) query.createdAt.$lte = new Date(endDate);
+    if (req.query.customer_id) {
+      query = query.eq('customer_id', req.query.customer_id);
     }
     
-    if (customer) query.customer = customer;
-    if (paymentStatus) query.paymentStatus = paymentStatus;
-    if (deliveryStatus) query.deliveryStatus = deliveryStatus;
+    if (req.query.payment_status) {
+      query = query.eq('payment_status', req.query.payment_status);
+    }
     
-    const sales = await LPGSale.find(query)
-      .populate('customer', 'name phone email')
-      .populate('items.product', 'name brand category')
-      .sort({ createdAt: -1 });
+    if (req.query.delivery_status) {
+      query = query.eq('delivery_status', req.query.delivery_status);
+    }
+    
+    if (req.query.start_date) {
+      query = query.gte('sale_date', req.query.start_date);
+    }
+    
+    if (req.query.end_date) {
+      query = query.lte('sale_date', req.query.end_date);
+    }
+    
+    query = query
+      .order('sale_date', { ascending: false })
+      .range(offset, offset + limit - 1);
+    
+    const { data: sales, error, count } = await query;
+    
+    if (error) throw error;
     
     res.json({
       success: true,
-      count: sales.length,
-      data: sales
+      count: sales?.length || 0,
+      total: count || 0,
+      page,
+      pages: Math.ceil((count || 0) / limit),
+      data: sales || []
     });
   } catch (error) {
     next(error);
   }
 };
 
+// @desc    Get sales report
+// @route   GET /api/sales/report
+// @access  Private
 const getSalesReport = async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query;
+    const supabase = getSupabaseClient();
     
-    // Convert string ID to ObjectId for aggregation
-    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
-      ? new mongoose.Types.ObjectId(req.user.id)
-      : req.user._id;
+    let query = supabase
+      .from('lpg_sales')
+      .select('total_amount, payment_method, payment_status')
+      .eq('user_id', req.user.id);
     
-    const matchStage = { soldBy: userId };
-    
-    if (startDate || endDate) {
-      matchStage.createdAt = {};
-      if (startDate) matchStage.createdAt.$gte = new Date(startDate);
-      if (endDate) matchStage.createdAt.$lte = new Date(endDate);
+    if (req.query.start_date) {
+      query = query.gte('sale_date', req.query.start_date);
     }
     
-    const report = await LPGSale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: null,
-          totalSales: { $sum: 1 },
-          totalRevenue: { $sum: '$total' },
-          totalPaid: { $sum: '$paidAmount' },
-          totalBalance: { $sum: '$remainingAmount' },
-          avgSaleValue: { $avg: '$total' }
-        }
-      }
-    ]);
+    if (req.query.end_date) {
+      query = query.lte('sale_date', req.query.end_date);
+    }
     
-    const salesByPaymentMethod = await LPGSale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$paymentMethod',
-          count: { $sum: 1 },
-          total: { $sum: '$total' }
-        }
-      }
-    ]);
+    const { data: sales, error } = await query;
     
-    const salesByStatus = await LPGSale.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: '$paymentStatus',
-          count: { $sum: 1 },
-          total: { $sum: '$total' }
-        }
+    if (error) throw error;
+    
+    // Calculate summary
+    const summary = {
+      totalSales: sales.length,
+      totalRevenue: sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0),
+      avgSaleValue: sales.length > 0 ? sales.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0) / sales.length : 0
+    };
+    
+    // Group by payment method
+    const byPaymentMethod = sales.reduce((acc, sale) => {
+      const method = sale.payment_method || 'Unknown';
+      if (!acc[method]) {
+        acc[method] = { _id: method, count: 0, total: 0 };
       }
-    ]);
+      acc[method].count++;
+      acc[method].total += parseFloat(sale.total_amount || 0);
+      return acc;
+    }, {});
+    
+    // Group by status
+    const byStatus = sales.reduce((acc, sale) => {
+      const status = sale.payment_status || 'Unknown';
+      if (!acc[status]) {
+        acc[status] = { _id: status, count: 0, total: 0 };
+      }
+      acc[status].count++;
+      acc[status].total += parseFloat(sale.total_amount || 0);
+      return acc;
+    }, {});
     
     res.json({
       success: true,
       data: {
-        summary: report[0] || {
-          totalSales: 0,
-          totalRevenue: 0,
-          totalPaid: 0,
-          totalBalance: 0,
-          avgSaleValue: 0
-        },
-        byPaymentMethod: salesByPaymentMethod,
-        byStatus: salesByStatus
+        summary,
+        byPaymentMethod: Object.values(byPaymentMethod),
+        byStatus: Object.values(byStatus)
       }
     });
   } catch (error) {

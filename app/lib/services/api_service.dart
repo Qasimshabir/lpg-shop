@@ -250,29 +250,58 @@ class ApiService {
     required String identifier,
     required String password,
   }) async {
-    if (kDebugMode) {
-      debugPrint('=== API SERVICE LOGIN DEBUG ===');
-      debugPrint('Base URL being used: $_baseUrl');
-      debugPrint('Full login URL: $_baseUrl/login');
-    }
-    
-    final response = await http.post(
-      Uri.parse('$_baseUrl/login'),
-      headers: _getHeaders(),
-      body: json.encode({
-        'identifier': identifier,
-        'password': password,
-      }),
-    );
+    try {
+      if (kDebugMode) {
+        debugPrint('=== API SERVICE LOGIN DEBUG ===');
+        debugPrint('Base URL being used: $_baseUrl');
+        debugPrint('Full login URL: $_baseUrl/login');
+        debugPrint('Request body: ${json.encode({'identifier': identifier, 'password': '***'})}');
+      }
+      
+      final response = await http.post(
+        Uri.parse('$_baseUrl/login'),
+        headers: _getHeaders(),
+        body: json.encode({
+          'identifier': identifier,
+          'password': password,
+        }),
+      ).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw ApiException('Request timeout - please check your internet connection', 0);
+        },
+      );
 
-    if (kDebugMode) {
-      debugPrint('Response status: ${response.statusCode}');
-      debugPrint('Response body: ${response.body}');
-    }
+      if (kDebugMode) {
+        debugPrint('Response status: ${response.statusCode}');
+        debugPrint('Response body: ${response.body}');
+      }
 
-    final data = _handleResponse(response);
-    await _saveToken(data['data']['token']);
-    return User.fromJson(data['data']);
+      final data = _handleResponse(response);
+      
+      if (kDebugMode) {
+        debugPrint('Login successful, saving token...');
+      }
+      
+      await _saveToken(data['data']['token']);
+      
+      if (kDebugMode) {
+        debugPrint('Token saved, creating user object...');
+      }
+      
+      return User.fromJson(data['data']);
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('❌ LOGIN ERROR: $e');
+        debugPrint('Stack trace: $stackTrace');
+      }
+      
+      if (e is ApiException) {
+        rethrow;
+      } else {
+        throw ApiException('Network error: ${e.toString()}', 0);
+      }
+    }
   }
 
   static Future<void> logout() async {

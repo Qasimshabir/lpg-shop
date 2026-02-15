@@ -177,17 +177,20 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
         padding: EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(icon, color: color, size: 24),
                 SizedBox(width: 8),
-                Expanded(
+                Flexible(
                   child: Text(
                     title,
                     style: LPGTextStyles.body2.copyWith(
                       color: LPGColors.textTertiary,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -199,6 +202,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
                 color: color,
                 fontWeight: FontWeight.bold,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

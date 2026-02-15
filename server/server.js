@@ -62,19 +62,18 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Routes
 app.use('/api', require('./routes/authRoutes'));
-// Temporarily disabled until controllers are updated for Supabase
-// app.use('/api/users', require('./routes/userRoutes'));
-// app.use('/api/roles', require('./routes/roleRoutes'));
-// app.use('/api/brands', require('./routes/brandRoutes'));
-// app.use('/api/categories', require('./routes/categoryRoutes'));
-// app.use('/api/feedback', require('./routes/feedbackRoutes'));
-// app.use('/api/images', require('./routes/imageRoutes'));
-// app.use('/api/products', require('./routes/lpgProductRoutes'));
-// app.use('/api/customers', require('./routes/lpgCustomerRoutes'));
-// app.use('/api/sales', require('./routes/lpgSalesRoutes'));
-// app.use('/api/cylinders', require('./routes/cylinderRoutes'));
-// app.use('/api/safety', require('./routes/safetyRoutes'));
-// app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/products', require('./routes/lpgProductRoutes'));
+app.use('/api/customers', require('./routes/lpgCustomerRoutes'));
+app.use('/api/sales', require('./routes/lpgSalesRoutes'));
+app.use('/api/feedback', require('./routes/feedbackRoutes'));
+app.use('/api/roles', require('./routes/roleRoutes'));
+app.use('/api/brands', require('./routes/brandRoutes'));
+app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/cylinders', require('./routes/cylinderRoutes'));
+app.use('/api/safety', require('./routes/safetyRoutes'));
+app.use('/api/delivery', require('./routes/deliveryRoutes'));
+// app.use('/api/images', require('./routes/imageRoutes')); // To be implemented
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {

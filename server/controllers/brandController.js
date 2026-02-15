@@ -1,87 +1,125 @@
-const Brand = require('../models/Brand');
+const { getSupabaseClient } = require('../config/supabase');
 
-// @desc    List all brands for the current user
+// @desc    List all brands
 // @route   GET /api/brands
 // @access  Private
 const getBrands = async (req, res, next) => {
   try {
-    const brands = await Brand.find({ userId: req.user.id }).sort({ title: 1 });
+    const supabase = getSupabaseClient();
+    
+    const { data: brands, error } = await supabase
+      .from('brands')
+      .select('*')
+      .eq('is_active', true)
+      .order('title', { ascending: true });
+
+    if (error) throw error;
+
     res.json({
       success: true,
-      count: brands.length,
-      data: brands,
+      count: brands?.length || 0,
+      data: brands || []
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Create a new brand for the current user
+// @desc    Create new brand
 // @route   POST /api/brands
 // @access  Private
 const createBrand = async (req, res, next) => {
   try {
-    const { title } = req.body;
-    if (!title || !title.trim()) {
-      return res.status(400).json({ success: false, message: 'Brand title is required' });
-    }
-    // Check for duplicate
-    const existing = await Brand.findOne({ title: title.trim(), userId: req.user.id });
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'Brand already exists' });
-    }
-    const brand = await Brand.create({ title: title.trim(), userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    const { data: brand, error } = await supabase
+      .from('brands')
+      .insert([{
+        title: req.body.title,
+        description: req.body.description || null,
+        logo_url: req.body.logo_url || null,
+        is_active: true
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
     res.status(201).json({
       success: true,
       message: 'Brand created successfully',
-      data: brand,
+      data: brand
     });
   } catch (error) {
-    // Handle duplicate key error
-    if (error.code === 11000) {
-      return res.status(400).json({ success: false, message: 'Brand already exists' });
-    }
     next(error);
   }
 };
 
-// @desc    Update a brand for the current user
+// @desc    Update brand
 // @route   PUT /api/brands/:id
 // @access  Private
 const updateBrand = async (req, res, next) => {
   try {
-    const { title } = req.body;
-    if (!title || !title.trim()) {
-      return res.status(400).json({ success: false, message: 'Brand title is required' });
-    }
-    const brand = await Brand.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      { title: title.trim() },
-      { new: true, runValidators: true }
-    );
+    const supabase = getSupabaseClient();
+    
+    const updateData = {};
+    if (req.body.title !== undefined) updateData.title = req.body.title;
+    if (req.body.description !== undefined) updateData.description = req.body.description;
+    if (req.body.logo_url !== undefined) updateData.logo_url = req.body.logo_url;
+    if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
+
+    const { data: brand, error } = await supabase
+      .from('brands')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
     if (!brand) {
-      return res.status(404).json({ success: false, message: 'Brand not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Brand not found'
+      });
     }
-    res.json({ success: true, message: 'Brand updated successfully', data: brand });
+
+    res.json({
+      success: true,
+      message: 'Brand updated successfully',
+      data: brand
+    });
   } catch (error) {
-    // Handle duplicate key error
-    if (error.code === 11000) {
-      return res.status(400).json({ success: false, message: 'Brand title already exists' });
-    }
     next(error);
   }
 };
 
-// @desc    Delete a brand for the current user
+// @desc    Delete brand
 // @route   DELETE /api/brands/:id
 // @access  Private
 const deleteBrand = async (req, res, next) => {
   try {
-    const brand = await Brand.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
-    if (!brand) {
-      return res.status(404).json({ success: false, message: 'Brand not found' });
+    const supabase = getSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('brands')
+      .delete()
+      .eq('id', req.params.id)
+      .select();
+
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Brand not found'
+      });
     }
-    res.json({ success: true, message: 'Brand deleted successfully' });
+
+    res.json({
+      success: true,
+      message: 'Brand deleted successfully'
+    });
   } catch (error) {
     next(error);
   }
@@ -91,5 +129,5 @@ module.exports = {
   getBrands,
   createBrand,
   updateBrand,
-  deleteBrand,
+  deleteBrand
 };

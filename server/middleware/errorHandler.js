@@ -17,21 +17,28 @@ const errorHandler = (err, req, res, next) => {
   // Log to console for dev
   console.error('❌ Error:', err);
 
-  // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    const message = 'Resource not found';
-    error = { message, statusCode: 404 };
-  }
-
-  // Mongoose duplicate key
-  if (err.code === 11000) {
+  // PostgreSQL/Supabase errors
+  if (err.code === '23505') {
+    // Unique constraint violation
     const message = 'Duplicate field value entered';
     error = { message, statusCode: 400 };
   }
 
-  // Mongoose validation error
+  if (err.code === '23503') {
+    // Foreign key constraint violation
+    const message = 'Referenced resource not found';
+    error = { message, statusCode: 400 };
+  }
+
+  if (err.code === '22P02') {
+    // Invalid text representation (bad UUID, etc.)
+    const message = 'Invalid ID format';
+    error = { message, statusCode: 400 };
+  }
+
+  // Validation errors
   if (err.name === 'ValidationError') {
-    const message = Object.values(err.errors).map(val => val.message);
+    const message = Object.values(err.errors || {}).map(val => val.message);
     error = { message, statusCode: 400 };
   }
 

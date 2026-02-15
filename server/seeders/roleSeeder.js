@@ -1,250 +1,28 @@
-const mongoose = require('mongoose');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
-
-// Role Model
-const roleSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    unique: true,
-    enum: ['super-admin', 'admin', 'manager', 'sales-person', 'delivery-person', 'inventory-manager']
-  },
-  displayName: {
-    type: String,
-    required: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  permissions: [{
-    resource: {
-      type: String,
-      required: true
-    },
-    actions: [{
-      type: String,
-      enum: ['create', 'read', 'update', 'delete', 'export', 'approve']
-    }]
-  }],
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-const Role = mongoose.model('Role', roleSchema);
+const { createClient } = require('@supabase/supabase-js');
 
 // Predefined roles with permissions
 const predefinedRoles = [
   {
-    name: 'super-admin',
-    displayName: 'Super Administrator',
-    description: 'Full system access with all permissions',
-    permissions: [
-      {
-        resource: 'users',
-        actions: ['create', 'read', 'update', 'delete']
-      },
-      {
-        resource: 'roles',
-        actions: ['create', 'read', 'update', 'delete']
-      },
-      {
-        resource: 'products',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'cylinders',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'customers',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'sales',
-        actions: ['create', 'read', 'update', 'delete', 'export', 'approve']
-      },
-      {
-        resource: 'delivery',
-        actions: ['create', 'read', 'update', 'delete']
-      },
-      {
-        resource: 'safety',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'reports',
-        actions: ['read', 'export']
-      },
-      {
-        resource: 'audit-logs',
-        actions: ['read', 'export']
-      }
-    ],
-    isActive: true
-  },
-  {
     name: 'admin',
-    displayName: 'Administrator',
-    description: 'Shop owner or main administrator with most permissions',
-    permissions: [
-      {
-        resource: 'users',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'products',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'cylinders',
-        actions: ['create', 'read', 'update', 'export']
-      },
-      {
-        resource: 'customers',
-        actions: ['create', 'read', 'update', 'delete', 'export']
-      },
-      {
-        resource: 'sales',
-        actions: ['create', 'read', 'update', 'delete', 'export', 'approve']
-      },
-      {
-        resource: 'delivery',
-        actions: ['create', 'read', 'update', 'delete']
-      },
-      {
-        resource: 'safety',
-        actions: ['create', 'read', 'update', 'export']
-      },
-      {
-        resource: 'reports',
-        actions: ['read', 'export']
-      },
-      {
-        resource: 'audit-logs',
-        actions: ['read']
-      }
-    ],
-    isActive: true
+    description: 'Administrator with full access',
+    permissions: JSON.stringify(['all'])
   },
   {
     name: 'manager',
-    displayName: 'Manager',
-    description: 'Shop manager with operational permissions',
-    permissions: [
-      {
-        resource: 'products',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'cylinders',
-        actions: ['read', 'update']
-      },
-      {
-        resource: 'customers',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'sales',
-        actions: ['create', 'read', 'update', 'approve']
-      },
-      {
-        resource: 'delivery',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'safety',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'reports',
-        actions: ['read', 'export']
-      }
-    ],
-    isActive: true
+    description: 'Manager with limited admin access',
+    permissions: JSON.stringify(['read', 'write', 'update'])
   },
   {
-    name: 'sales-person',
-    displayName: 'Sales Person',
-    description: 'Sales staff with customer and sales permissions',
-    permissions: [
-      {
-        resource: 'products',
-        actions: ['read']
-      },
-      {
-        resource: 'cylinders',
-        actions: ['read']
-      },
-      {
-        resource: 'customers',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'sales',
-        actions: ['create', 'read']
-      },
-      {
-        resource: 'safety',
-        actions: ['create', 'read', 'update']
-      }
-    ],
-    isActive: true
+    name: 'staff',
+    description: 'Staff member with basic access',
+    permissions: JSON.stringify(['read', 'write'])
   },
   {
-    name: 'delivery-person',
-    displayName: 'Delivery Person',
-    description: 'Delivery staff with delivery and route permissions',
-    permissions: [
-      {
-        resource: 'customers',
-        actions: ['read']
-      },
-      {
-        resource: 'sales',
-        actions: ['read', 'update']
-      },
-      {
-        resource: 'delivery',
-        actions: ['read', 'update']
-      },
-      {
-        resource: 'safety',
-        actions: ['read']
-      }
-    ],
-    isActive: true
-  },
-  {
-    name: 'inventory-manager',
-    displayName: 'Inventory Manager',
-    description: 'Inventory staff with product and cylinder management permissions',
-    permissions: [
-      {
-        resource: 'products',
-        actions: ['create', 'read', 'update']
-      },
-      {
-        resource: 'cylinders',
-        actions: ['create', 'read', 'update', 'export']
-      },
-      {
-        resource: 'safety',
-        actions: ['read', 'update']
-      },
-      {
-        resource: 'reports',
-        actions: ['read']
-      }
-    ],
-    isActive: true
+    name: 'customer',
+    description: 'Customer with view-only access',
+    permissions: JSON.stringify(['read'])
   }
 ];
 
@@ -252,37 +30,58 @@ async function seedRoles() {
   try {
     console.log('🌱 Starting Role Seeder...\n');
     
-    // Connect to MongoDB
-    console.log('📡 Connecting to MongoDB...');
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ Connected to MongoDB\n');
+    // Initialize Supabase client
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env');
+    }
+
+    console.log('📡 Connecting to Supabase...');
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log('✅ Connected to Supabase\n');
     
     // Clear existing roles
     console.log('🗑️  Clearing existing roles...');
-    await Role.deleteMany({});
-    console.log('✅ Existing roles cleared\n');
+    const { error: deleteError } = await supabase
+      .from('roles')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+    
+    if (deleteError && deleteError.code !== 'PGRST116') {
+      console.log('⚠️  Warning clearing roles:', deleteError.message);
+    } else {
+      console.log('✅ Existing roles cleared\n');
+    }
     
     // Insert predefined roles
     console.log('📝 Inserting predefined roles...\n');
     
-    for (const roleData of predefinedRoles) {
-      const role = await Role.create(roleData);
-      console.log(`   ✅ Created role: ${role.displayName} (${role.name})`);
-      console.log(`      Permissions: ${role.permissions.length} resources`);
+    const { data: roles, error: insertError } = await supabase
+      .from('roles')
+      .insert(predefinedRoles)
+      .select();
+    
+    if (insertError) {
+      throw insertError;
     }
+    
+    roles.forEach(role => {
+      console.log(`   ✅ Created role: ${role.name}`);
+      console.log(`      Description: ${role.description}`);
+    });
     
     console.log('\n🎉 Role seeding completed successfully!\n');
     
     // Display summary
     console.log('📊 Summary:');
-    console.log(`   Total roles created: ${predefinedRoles.length}`);
+    console.log(`   Total roles created: ${roles.length}`);
     console.log('\n📋 Available Roles:');
     
-    const roles = await Role.find().sort({ name: 1 });
     roles.forEach(role => {
-      console.log(`\n   🔐 ${role.displayName} (${role.name})`);
+      console.log(`\n   🔐 ${role.name}`);
       console.log(`      ${role.description}`);
-      console.log(`      Resources: ${role.permissions.map(p => p.resource).join(', ')}`);
     });
     
     console.log('\n✨ Roles are ready to be assigned to users!\n');
@@ -290,9 +89,6 @@ async function seedRoles() {
   } catch (error) {
     console.error('❌ Error seeding roles:', error.message);
     console.error(error);
-  } finally {
-    await mongoose.connection.close();
-    console.log('👋 Disconnected from MongoDB');
   }
 }
 

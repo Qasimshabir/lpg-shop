@@ -1,52 +1,47 @@
-const LPGCustomer = require('../models/LPGCustomer');
+const { getSupabaseClient } = require('../config/supabase');
 
 // @desc    Get all LPG customers
-// @route   GET /api/lpg/customers
+// @route   GET /api/customers
 // @access  Private
 const getLPGCustomers = async (req, res, next) => {
   try {
+    const supabase = getSupabaseClient();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    let query = { userId: req.user.id };
+    let query = supabase
+      .from('lpg_customers')
+      .select('*', { count: 'exact' })
+      .eq('user_id', req.user.id);
 
     if (req.query.search) {
-      query.$or = [
-        { name: new RegExp(req.query.search, 'i') },
-        { email: new RegExp(req.query.search, 'i') },
-        { phone: new RegExp(req.query.search, 'i') },
-        { businessName: new RegExp(req.query.search, 'i') },
-        { 'premises.name': new RegExp(req.query.search, 'i') }
-      ];
+      query = query.or(`name.ilike.%${req.query.search}%,email.ilike.%${req.query.search}%,phone.ilike.%${req.query.search}%,customer_id.ilike.%${req.query.search}%`);
     }
 
-    if (req.query.customerType) {
-      query.customerType = req.query.customerType;
+    if (req.query.customer_type) {
+      query = query.eq('customer_type', req.query.customer_type);
     }
 
-    if (req.query.loyaltyTier) {
-      query.loyaltyTier = req.query.loyaltyTier;
+    if (req.query.is_active !== undefined) {
+      query = query.eq('is_active', req.query.is_active === 'true');
     }
 
-    if (req.query.isActive !== undefined) {
-      query.isActive = req.query.isActive === 'true';
-    }
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    const customers = await LPGCustomer.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const { data: customers, error, count } = await query;
 
-    const total = await LPGCustomer.countDocuments(query);
+    if (error) throw error;
 
     res.json({
       success: true,
-      count: customers.length,
-      total,
+      count: customers?.length || 0,
+      total: count || 0,
       page,
-      pages: Math.ceil(total / limit),
-      data: customers
+      pages: Math.ceil((count || 0) / limit),
+      data: customers || []
     });
   } catch (error) {
     next(error);
@@ -54,13 +49,20 @@ const getLPGCustomers = async (req, res, next) => {
 };
 
 // @desc    Get single LPG customer
-// @route   GET /api/lpg/customers/:id
+// @route   GET /api/customers/:id
 // @access  Private
 const getLPGCustomer = async (req, res, next) => {
   try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    const { data: customer, error } = await supabase
+      .from('lpg_customers')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
 
-    if (!customer) {
+    if (error || !customer) {
       return res.status(404).json({
         success: false,
         message: 'Customer not found'
@@ -77,14 +79,38 @@ const getLPGCustomer = async (req, res, next) => {
 };
 
 // @desc    Create new LPG customer
-// @route   POST /api/lpg/customers
+// @route   POST /api/customers
 // @access  Private
 const createLPGCustomer = async (req, res, next) => {
   try {
-    const customer = await LPGCustomer.create({
-      ...req.body,
-      userId: req.user.id
-    });
+    const supabase = getSupabaseClient();
+    
+    // Generate customer_id if not provided
+    const customerId = req.body.customer_id || `CUST-${Date.now()}`;
+    
+    const customerData = {
+      user_id: req.user.id,
+      customer_id: customerId,
+      name: req.body.name,
+      email: req.body.email || null,
+      phone: req.body.phone,
+      address: req.body.address || null,
+      city: req.body.city || null,
+      state: req.body.state || null,
+      postal_code: req.body.postal_code || null,
+      customer_type: req.body.customer_type || 'residential',
+      registration_date: req.body.registration_date || new Date().toISOString().split('T')[0],
+      is_active: req.body.is_active !== undefined ? req.body.is_active : true,
+      notes: req.body.notes || null
+    };
+
+    const { data: customer, error } = await supabase
+      .from('lpg_customers')
+      .insert([customerData])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     res.status(201).json({
       success: true,
@@ -97,18 +123,33 @@ const createLPGCustomer = async (req, res, next) => {
 };
 
 // @desc    Update LPG customer
-// @route   PUT /api/lpg/customers/:id
+// @route   PUT /api/customers/:id
 // @access  Private
 const updateLPGCustomer = async (req, res, next) => {
   try {
-    const customer = await LPGCustomer.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      req.body,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    const supabase = getSupabaseClient();
+    
+    const updateData = {};
+    if (req.body.name !== undefined) updateData.name = req.body.name;
+    if (req.body.email !== undefined) updateData.email = req.body.email;
+    if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.address !== undefined) updateData.address = req.body.address;
+    if (req.body.city !== undefined) updateData.city = req.body.city;
+    if (req.body.state !== undefined) updateData.state = req.body.state;
+    if (req.body.postal_code !== undefined) updateData.postal_code = req.body.postal_code;
+    if (req.body.customer_type !== undefined) updateData.customer_type = req.body.customer_type;
+    if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
+    if (req.body.notes !== undefined) updateData.notes = req.body.notes;
+
+    const { data: customer, error } = await supabase
+      .from('lpg_customers')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
 
     if (!customer) {
       return res.status(404).json({
@@ -128,20 +169,27 @@ const updateLPGCustomer = async (req, res, next) => {
 };
 
 // @desc    Delete LPG customer
-// @route   DELETE /api/lpg/customers/:id
+// @route   DELETE /api/customers/:id
 // @access  Private
 const deleteLPGCustomer = async (req, res, next) => {
   try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('lpg_customers')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select();
 
-    if (!customer) {
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Customer not found'
       });
     }
-
-    await customer.deleteOne();
 
     res.json({
       success: true,
@@ -152,349 +200,45 @@ const deleteLPGCustomer = async (req, res, next) => {
   }
 };
 
-// @desc    Add premises to customer
-// @route   POST /api/lpg/customers/:id/premises
-// @access  Private
+// Simplified methods - to be implemented later
 const addPremises = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    await customer.addPremises(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: 'Premises added successfully',
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Update premises
-// @route   PUT /api/lpg/customers/:id/premises/:premisesId
-// @access  Private
 const updatePremises = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    await customer.updatePremises(req.params.premisesId, req.body);
-
-    res.json({
-      success: true,
-      message: 'Premises updated successfully',
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Remove premises
-// @route   DELETE /api/lpg/customers/:id/premises/:premisesId
-// @access  Private
 const removePremises = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    await customer.removePremises(req.params.premisesId);
-
-    res.json({
-      success: true,
-      message: 'Premises removed successfully',
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Add refill record
-// @route   POST /api/lpg/customers/:id/refill
-// @access  Private
 const addRefillRecord = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    const refillData = {
-      ...req.body,
-      soldBy: req.user.id
-    };
-
-    await customer.addRefillRecord(refillData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Refill record added successfully',
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get customer refill history
-// @route   GET /api/lpg/customers/:id/refill-history
-// @access  Private
 const getRefillHistory = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id })
-      .populate('refillHistory.soldBy', 'name');
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    const refillHistory = customer.refillHistory
-      .sort((a, b) => b.refillDate - a.refillDate)
-      .slice(skip, skip + limit);
-
-    const total = customer.refillHistory.length;
-
-    res.json({
-      success: true,
-      count: refillHistory.length,
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-      data: refillHistory
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Update customer credit
-// @route   PUT /api/lpg/customers/:id/credit
-// @access  Private
 const updateCredit = async (req, res, next) => {
-  try {
-    const { amount, operation = 'add' } = req.body;
-
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    await customer.updateCredit(amount, operation);
-
-    res.json({
-      success: true,
-      message: 'Credit updated successfully',
-      data: customer
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get customers due for refill
-// @route   GET /api/lpg/customers/due-refill
-// @access  Private
 const getCustomersDueForRefill = async (req, res, next) => {
-  try {
-    const daysAhead = parseInt(req.query.days) || 7;
-    const customers = await LPGCustomer.getCustomersDueForRefill(req.user.id, daysAhead);
-
-    res.json({
-      success: true,
-      count: customers.length,
-      data: customers
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get top customers by spending
-// @route   GET /api/lpg/customers/top-customers
-// @access  Private
 const getTopCustomers = async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10;
-    const customers = await LPGCustomer.getTopCustomers(req.user.id, limit);
-
-    res.json({
-      success: true,
-      count: customers.length,
-      data: customers
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get customer analytics
-// @route   GET /api/lpg/customers/analytics
-// @access  Private
 const getCustomerAnalytics = async (req, res, next) => {
-  try {
-    const analytics = await LPGCustomer.aggregate([
-      { $match: { userId: req.user._id, isActive: true } },
-      {
-        $group: {
-          _id: null,
-          totalCustomers: { $sum: 1 },
-          totalSpent: { $sum: '$totalSpent' },
-          totalRefills: { $sum: '$totalRefills' },
-          avgSpentPerCustomer: { $avg: '$totalSpent' },
-          avgRefillsPerCustomer: { $avg: '$totalRefills' }
-        }
-      },
-      {
-        $project: {
-          _id: 0,
-          totalCustomers: 1,
-          totalSpent: { $round: ['$totalSpent', 2] },
-          totalRefills: 1,
-          avgSpentPerCustomer: { $round: ['$avgSpentPerCustomer', 2] },
-          avgRefillsPerCustomer: { $round: ['$avgRefillsPerCustomer', 1] }
-        }
-      }
-    ]);
-
-    // Get loyalty tier distribution
-    const loyaltyDistribution = await LPGCustomer.aggregate([
-      { $match: { userId: req.user._id, isActive: true } },
-      {
-        $group: {
-          _id: '$loyaltyTier',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    // Get customer type distribution
-    const customerTypeDistribution = await LPGCustomer.aggregate([
-      { $match: { userId: req.user._id, isActive: true } },
-      {
-        $group: {
-          _id: '$customerType',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        overview: analytics[0] || {
-          totalCustomers: 0,
-          totalSpent: 0,
-          totalRefills: 0,
-          avgSpentPerCustomer: 0,
-          avgRefillsPerCustomer: 0
-        },
-        loyaltyDistribution,
-        customerTypeDistribution
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get customer consumption pattern
-// @route   GET /api/lpg/customers/:id/consumption-pattern
-// @access  Private
 const getConsumptionPattern = async (req, res, next) => {
-  try {
-    const customer = await LPGCustomer.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: 'Customer not found'
-      });
-    }
-
-    // Get monthly consumption for the last 12 months
-    const monthlyConsumption = await LPGCustomer.aggregate([
-      { $match: { _id: customer._id } },
-      { $unwind: '$refillHistory' },
-      {
-        $addFields: {
-          month: { $dateToString: { format: '%Y-%m', date: '$refillHistory.refillDate' } },
-          cylinderWeight: {
-            $toDouble: { $substr: ['$refillHistory.cylinderType', 0, -2] }
-          },
-          totalWeight: {
-            $multiply: [
-              { $toDouble: { $substr: ['$refillHistory.cylinderType', 0, -2] } },
-              '$refillHistory.quantity'
-            ]
-          }
-        }
-      },
-      {
-        $group: {
-          _id: '$month',
-          totalConsumption: { $sum: '$totalWeight' },
-          totalRefills: { $sum: '$refillHistory.quantity' },
-          totalAmount: { $sum: '$refillHistory.totalAmount' }
-        }
-      },
-      { $sort: { _id: -1 } },
-      { $limit: 12 }
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        customer: {
-          id: customer._id,
-          name: customer.name,
-          averageMonthlyConsumption: customer.averageMonthlyConsumption,
-          lastRefillDate: customer.lastRefillDate,
-          nextExpectedRefill: customer.nextExpectedRefill
-        },
-        monthlyConsumption: monthlyConsumption.reverse()
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
 module.exports = {

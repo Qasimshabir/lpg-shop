@@ -1,103 +1,50 @@
-const LPGProduct = require('../models/LPGProduct');
+const { getSupabaseClient } = require('../config/supabase');
 const { saveDataUriToFile } = require('../utils/fileStorage');
 
 // @desc    Get all LPG products
-// @route   GET /api/lpg/products
+// @route   GET /api/products
 // @access  Private
 const getLPGProducts = async (req, res, next) => {
   try {
+    const supabase = getSupabaseClient();
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    // Build query - filter by user
-    let query = { userId: req.user.id };
+    // Build query
+    let query = supabase
+      .from('lpg_products')
+      .select('*', { count: 'exact' })
+      .eq('user_id', req.user.id);
     
     if (req.query.category) {
-      query.category = req.query.category;
+      query = query.eq('category', req.query.category);
     }
     
-    if (req.query.productType) {
-      query.productType = req.query.productType;
-    }
-    
-    if (req.query.cylinderType) {
-      query.cylinderType = req.query.cylinderType;
-    }
-    
-    if (req.query.brand) {
-      query.brand = new RegExp(req.query.brand, 'i');
-    }
-    
-    if (req.query.isActive !== undefined) {
-      query.isActive = req.query.isActive === 'true';
+    if (req.query.is_active !== undefined) {
+      query = query.eq('is_active', req.query.is_active === 'true');
     }
 
     if (req.query.search) {
-      query.$or = [
-        { name: new RegExp(req.query.search, 'i') },
-        { brand: new RegExp(req.query.search, 'i') },
-        { sku: new RegExp(req.query.search, 'i') },
-        { description: new RegExp(req.query.search, 'i') }
-      ];
+      query = query.or(`name.ilike.%${req.query.search}%,sku.ilike.%${req.query.search}%,description.ilike.%${req.query.search}%`);
     }
 
-    // Filter by stock status
-    if (req.query.stockStatus) {
-      switch (req.query.stockStatus) {
-        case 'low':
-          query.$expr = {
-            $or: [
-              {
-                $and: [
-                  { $eq: ['$productType', 'cylinder'] },
-                  { $lte: ['$cylinderStates.filled', '$minStock'] }
-                ]
-              },
-              {
-                $and: [
-                  { $eq: ['$productType', 'accessory'] },
-                  { $lte: ['$stock', '$minStock'] }
-                ]
-              }
-            ]
-          };
-          break;
-        case 'out':
-          query.$expr = {
-            $or: [
-              {
-                $and: [
-                  { $eq: ['$productType', 'cylinder'] },
-                  { $eq: ['$cylinderStates.filled', 0] }
-                ]
-              },
-              {
-                $and: [
-                  { $eq: ['$productType', 'accessory'] },
-                  { $eq: ['$stock', 0] }
-                ]
-              }
-            ]
-          };
-          break;
-      }
-    }
+    // Apply pagination and sorting
+    query = query
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    const products = await LPGProduct.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    const { data: products, error, count } = await query;
 
-    const total = await LPGProduct.countDocuments(query);
+    if (error) throw error;
 
     res.json({
       success: true,
-      count: products.length,
-      total,
+      count: products?.length || 0,
+      total: count || 0,
       page,
-      pages: Math.ceil(total / limit),
-      data: products
+      pages: Math.ceil((count || 0) / limit),
+      data: products || []
     });
   } catch (error) {
     next(error);
@@ -105,13 +52,20 @@ const getLPGProducts = async (req, res, next) => {
 };
 
 // @desc    Get single LPG product
-// @route   GET /api/lpg/products/:id
+// @route   GET /api/products/:id
 // @access  Private
 const getLPGProduct = async (req, res, next) => {
   try {
-    const product = await LPGProduct.findOne({ _id: req.params.id, userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    const { data: product, error } = await supabase
+      .from('lpg_products')
+      .select('*')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
 
-    if (!product) {
+    if (error || !product) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
@@ -128,46 +82,40 @@ const getLPGProduct = async (req, res, next) => {
 };
 
 // @desc    Create new LPG product
-// @route   POST /api/lpg/products
+// @route   POST /api/products
 // @access  Private
 const createLPGProduct = async (req, res, next) => {
   try {
+    const supabase = getSupabaseClient();
+    
     const productData = {
-      ...req.body,
-      userId: req.user.id
+      user_id: req.user.id,
+      name: req.body.name,
+      brand_id: req.body.brand_id || null,
+      category: req.body.category,
+      weight: req.body.weight || null,
+      weight_unit: req.body.weight_unit || 'kg',
+      price: req.body.price,
+      stock_quantity: req.body.stock_quantity || 0,
+      reorder_level: req.body.reorder_level || 10,
+      description: req.body.description || null,
+      image_url: req.body.image_url || null,
+      sku: req.body.sku || null,
+      is_active: req.body.is_active !== undefined ? req.body.is_active : true
     };
 
-    // Handle image uploads
-    if (req.body.images && Array.isArray(req.body.images)) {
-      const imageUrls = [];
-      for (const imageData of req.body.images) {
-        if (imageData.startsWith('data:image/')) {
-          const imageUrl = await saveDataUriToFile(imageData, 'products');
-          imageUrls.push(imageUrl);
-        } else {
-          imageUrls.push(imageData);
-        }
-      }
-      productData.images = imageUrls;
+    // Handle image upload if provided
+    if (req.body.image && req.body.image.startsWith('data:image/')) {
+      productData.image_url = await saveDataUriToFile(req.body.image, 'products');
     }
 
-    // Set default values based on product type
-    if (productData.productType === 'cylinder') {
-      if (!productData.cylinderStates) {
-        productData.cylinderStates = {
-          empty: 0,
-          filled: productData.stock || 0,
-          sold: 0
-        };
-      }
-      
-      // Set capacity based on cylinder type
-      if (productData.cylinderType) {
-        productData.capacity = parseFloat(productData.cylinderType.replace('kg', ''));
-      }
-    }
+    const { data: product, error } = await supabase
+      .from('lpg_products')
+      .insert([productData])
+      .select()
+      .single();
 
-    const product = await LPGProduct.create(productData);
+    if (error) throw error;
 
     res.status(201).json({
       success: true,
@@ -180,48 +128,56 @@ const createLPGProduct = async (req, res, next) => {
 };
 
 // @desc    Update LPG product
-// @route   PUT /api/lpg/products/:id
+// @route   PUT /api/products/:id
 // @access  Private
 const updateLPGProduct = async (req, res, next) => {
   try {
-    let product = await LPGProduct.findOne({ _id: req.params.id, userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    // Check if product exists
+    const { data: existing } = await supabase
+      .from('lpg_products')
+      .select('id')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
 
-    if (!product) {
+    if (!existing) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
       });
     }
 
-    const updateData = { ...req.body };
+    const updateData = {};
+    if (req.body.name !== undefined) updateData.name = req.body.name;
+    if (req.body.brand_id !== undefined) updateData.brand_id = req.body.brand_id;
+    if (req.body.category !== undefined) updateData.category = req.body.category;
+    if (req.body.weight !== undefined) updateData.weight = req.body.weight;
+    if (req.body.weight_unit !== undefined) updateData.weight_unit = req.body.weight_unit;
+    if (req.body.price !== undefined) updateData.price = req.body.price;
+    if (req.body.stock_quantity !== undefined) updateData.stock_quantity = req.body.stock_quantity;
+    if (req.body.reorder_level !== undefined) updateData.reorder_level = req.body.reorder_level;
+    if (req.body.description !== undefined) updateData.description = req.body.description;
+    if (req.body.sku !== undefined) updateData.sku = req.body.sku;
+    if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
 
-    // Handle image uploads
-    if (req.body.images && Array.isArray(req.body.images)) {
-      const imageUrls = [];
-      for (const imageData of req.body.images) {
-        if (imageData.startsWith('data:image/')) {
-          const imageUrl = await saveDataUriToFile(imageData, 'products');
-          imageUrls.push(imageUrl);
-        } else {
-          imageUrls.push(imageData);
-        }
-      }
-      updateData.images = imageUrls;
+    // Handle image upload
+    if (req.body.image && req.body.image.startsWith('data:image/')) {
+      updateData.image_url = await saveDataUriToFile(req.body.image, 'products');
+    } else if (req.body.image_url !== undefined) {
+      updateData.image_url = req.body.image_url;
     }
 
-    // Update capacity if cylinder type changed
-    if (updateData.cylinderType && updateData.productType === 'cylinder') {
-      updateData.capacity = parseFloat(updateData.cylinderType.replace('kg', ''));
-    }
+    const { data: product, error } = await supabase
+      .from('lpg_products')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
 
-    product = await LPGProduct.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id },
-      updateData,
-      {
-        new: true,
-        runValidators: true
-      }
-    );
+    if (error) throw error;
 
     res.json({
       success: true,
@@ -234,20 +190,27 @@ const updateLPGProduct = async (req, res, next) => {
 };
 
 // @desc    Delete LPG product
-// @route   DELETE /api/lpg/products/:id
+// @route   DELETE /api/products/:id
 // @access  Private
 const deleteLPGProduct = async (req, res, next) => {
   try {
-    const product = await LPGProduct.findOne({ _id: req.params.id, userId: req.user.id });
+    const supabase = getSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('lpg_products')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select();
 
-    if (!product) {
+    if (error) throw error;
+
+    if (!data || data.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
       });
     }
-
-    await product.deleteOne();
 
     res.json({
       success: true,
@@ -258,207 +221,77 @@ const deleteLPGProduct = async (req, res, next) => {
   }
 };
 
-// @desc    Update cylinder state
-// @route   PUT /api/lpg/products/:id/cylinder-state
-// @access  Private
+// Simplified methods for Supabase
 const updateCylinderState = async (req, res, next) => {
-  try {
-    const { state, quantity, operation = 'add' } = req.body;
-
-    const product = await LPGProduct.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    if (product.productType !== 'cylinder') {
-      return res.status(400).json({
-        success: false,
-        message: 'This operation is only for cylinder products'
-      });
-    }
-
-    await product.updateCylinderState(state, quantity, operation);
-
-    res.json({
-      success: true,
-      message: 'Cylinder state updated successfully',
-      data: product
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Exchange cylinder
-// @route   PUT /api/lpg/products/:id/exchange
-// @access  Private
 const exchangeCylinder = async (req, res, next) => {
-  try {
-    const { quantity } = req.body;
-
-    const product = await LPGProduct.findOne({ _id: req.params.id, userId: req.user.id });
-
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    await product.exchangeCylinder(quantity);
-
-    res.json({
-      success: true,
-      message: 'Cylinder exchange completed successfully',
-      data: product
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get low stock products
-// @route   GET /api/lpg/products/low-stock
-// @access  Private
 const getLowStockProducts = async (req, res, next) => {
   try {
-    const products = await LPGProduct.find({
-      userId: req.user.id,
-      isActive: true,
-      $or: [
-        {
-          productType: 'cylinder',
-          $expr: { $lte: ['$cylinderStates.filled', '$minStock'] }
-        },
-        {
-          productType: 'accessory',
-          $expr: { $lte: ['$stock', '$minStock'] }
-        }
-      ]
-    }).sort({ createdAt: -1 });
+    const supabase = getSupabaseClient();
+    
+    const { data: products, error } = await supabase
+      .from('lpg_products')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .eq('is_active', true)
+      .filter('stock_quantity', 'lte', 'reorder_level')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
 
     res.json({
       success: true,
-      count: products.length,
-      data: products
+      count: products?.length || 0,
+      data: products || []
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get products by category
-// @route   GET /api/lpg/products/category/:category
-// @access  Private
 const getProductsByCategory = async (req, res, next) => {
   try {
+    const supabase = getSupabaseClient();
     const { category } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
-    const products = await LPGProduct.find({
-      userId: req.user.id,
-      category,
-      isActive: true
-    })
-      .sort({ name: 1 })
-      .skip(skip)
-      .limit(limit);
+    const { data: products, error, count } = await supabase
+      .from('lpg_products')
+      .select('*', { count: 'exact' })
+      .eq('user_id', req.user.id)
+      .eq('category', category)
+      .eq('is_active', true)
+      .order('name', { ascending: true })
+      .range(offset, offset + limit - 1);
 
-    const total = await LPGProduct.countDocuments({
-      userId: req.user.id,
-      category,
-      isActive: true
-    });
+    if (error) throw error;
 
     res.json({
       success: true,
-      count: products.length,
-      total,
+      count: products?.length || 0,
+      total: count || 0,
       page,
-      pages: Math.ceil(total / limit),
-      data: products
+      pages: Math.ceil((count || 0) / limit),
+      data: products || []
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get cylinder inventory summary
-// @route   GET /api/lpg/products/cylinder-summary
-// @access  Private
 const getCylinderSummary = async (req, res, next) => {
-  try {
-    const summary = await LPGProduct.aggregate([
-      {
-        $match: {
-          userId: req.user._id,
-          productType: 'cylinder',
-          isActive: true
-        }
-      },
-      {
-        $group: {
-          _id: '$cylinderType',
-          totalEmpty: { $sum: '$cylinderStates.empty' },
-          totalFilled: { $sum: '$cylinderStates.filled' },
-          totalSold: { $sum: '$cylinderStates.sold' },
-          products: { $push: '$$ROOT' }
-        }
-      },
-      {
-        $addFields: {
-          totalCylinders: { $add: ['$totalEmpty', '$totalFilled'] },
-          availableForSale: '$totalFilled'
-        }
-      },
-      {
-        $sort: { _id: 1 }
-      }
-    ]);
-
-    res.json({
-      success: true,
-      data: summary
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
-// @desc    Get products due for inspection
-// @route   GET /api/lpg/products/inspection-due
-// @access  Private
 const getProductsDueForInspection = async (req, res, next) => {
-  try {
-    const daysAhead = parseInt(req.query.days) || 30;
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() + daysAhead);
-
-    const products = await LPGProduct.find({
-      userId: req.user.id,
-      productType: 'cylinder',
-      inspectionRequired: true,
-      isActive: true,
-      $or: [
-        { nextInspectionDue: { $lte: cutoffDate } },
-        { nextInspectionDue: null, lastInspectionDate: null }
-      ]
-    }).sort({ nextInspectionDue: 1 });
-
-    res.json({
-      success: true,
-      count: products.length,
-      data: products
-    });
-  } catch (error) {
-    next(error);
-  }
+  res.status(501).json({ success: false, message: 'Feature not yet implemented' });
 };
 
 module.exports = {

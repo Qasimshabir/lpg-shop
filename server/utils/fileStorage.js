@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const Image = require('../models/Image');
+const { getSupabaseClient } = require('../config/supabase');
 
 function getExtFromMime(mime) {
   switch (mime) {
@@ -22,8 +22,8 @@ function randomId() {
   return crypto.randomBytes(16).toString('hex');
 }
 
-// Save a data URI (e.g. data:image/jpeg;base64,...) to MongoDB
-// Returns the public URL path like /api/images/<imageId>
+// Save a data URI (e.g. data:image/jpeg;base64,...) to Supabase
+// Returns the public URL path
 async function saveDataUriToFile(dataUri, subdir = 'products', userId = null) {
   const match = /^data:([^;]+);base64,(.*)$/i.exec(dataUri);
   if (!match) {
@@ -36,46 +36,67 @@ async function saveDataUriToFile(dataUri, subdir = 'products', userId = null) {
   const buf = Buffer.from(b64, 'base64');
   
   try {
-    // Save to MongoDB
-    const image = new Image({
-      filename: fileName,
-      originalName: fileName,
-      mimeType: mime,
-      size: buf.length,
-      data: buf,
-      category: subdir,
-      uploadedBy: userId
-    });
+    const supabase = getSupabaseClient();
+    
+    // Save to Supabase images table
+    const { data: image, error } = await supabase
+      .from('images')
+      .insert([{
+        filename: fileName,
+        original_name: fileName,
+        mime_type: mime,
+        size: buf.length,
+        path: `/${subdir}/${fileName}`,
+        url: `/api/images/${fileName}`,
+        uploaded_by: userId
+      }])
+      .select()
+      .single();
 
-    await image.save();
+    if (error) throw error;
     
     // Return public URL path
-    const publicPath = `/api/images/${image._id}`;
-    return { publicPath, absPath: publicPath };
+    const publicPath = `/api/images/${image.id}`;
+    return publicPath;
   } catch (error) {
-    console.error('Error saving image to MongoDB:', error);
+    console.error('Error saving image to Supabase:', error);
     throw error;
   }
 }
 
-// Get image from MongoDB by ID
+// Get image from Supabase by ID
 async function getImageById(imageId) {
   try {
-    const image = await Image.findById(imageId);
+    const supabase = getSupabaseClient();
+    
+    const { data: image, error } = await supabase
+      .from('images')
+      .select('*')
+      .eq('id', imageId)
+      .single();
+
+    if (error) throw error;
     return image;
   } catch (error) {
-    console.error('Error retrieving image from MongoDB:', error);
+    console.error('Error retrieving image from Supabase:', error);
     throw error;
   }
 }
 
-// Delete image from MongoDB
+// Delete image from Supabase
 async function deleteImageById(imageId) {
   try {
-    await Image.findByIdAndDelete(imageId);
+    const supabase = getSupabaseClient();
+    
+    const { error } = await supabase
+      .from('images')
+      .delete()
+      .eq('id', imageId);
+
+    if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Error deleting image from MongoDB:', error);
+    console.error('Error deleting image from Supabase:', error);
     return false;
   }
 }
