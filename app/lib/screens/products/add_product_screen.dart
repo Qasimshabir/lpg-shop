@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
+import '../../models/lpg_product.dart';
 import '../../lpg_theme.dart';
 
 class AddProductScreen extends StatefulWidget {
-  const AddProductScreen({Key? key}) : super(key: key);
+  final LPGProduct? product; // null for add, non-null for edit
+
+  const AddProductScreen({Key? key, this.product}) : super(key: key);
 
   @override
   State<AddProductScreen> createState() => _AddProductScreenState();
@@ -34,6 +37,40 @@ class _AddProductScreenState extends State<AddProductScreen> {
   // Cylinder states (only for cylinders)
   final _emptyController = TextEditingController(text: '0');
   final _filledController = TextEditingController(text: '0');
+
+  bool get isEditMode => widget.product != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditMode) {
+      _loadProductData();
+    }
+  }
+
+  void _loadProductData() {
+    final product = widget.product!;
+    _nameController.text = product.name;
+    _brandController.text = product.brand;
+    _skuController.text = product.sku;
+    _priceController.text = product.price.toString();
+    _costPriceController.text = product.costPrice.toString();
+    _stockController.text = product.stock.toString();
+    _minStockController.text = product.minStock.toString();
+    _descriptionController.text = product.description ?? '';
+    _depositAmountController.text = product.depositAmount.toString();
+    _refillPriceController.text = product.refillPrice.toString();
+    
+    _productType = product.productType;
+    _category = product.category;
+    _cylinderType = product.cylinderType;
+    _capacity = product.capacity;
+    
+    if (product.cylinderStates != null) {
+      _emptyController.text = product.cylinderStates!.empty.toString();
+      _filledController.text = product.cylinderStates!.filled.toString();
+    }
+  }
 
   final List<String> _categories = [
     'LPG Cylinder',
@@ -104,12 +141,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
         productData['minStock'] = int.parse(_minStockController.text);
       }
 
-      await LPGApiService.createLPGProduct(productData);
+      if (isEditMode) {
+        await LPGApiService.updateLPGProduct(widget.product!.id, productData);
+      } else {
+        await LPGApiService.createLPGProduct(productData);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Product added successfully!'),
+            content: Text(isEditMode ? 'Product updated successfully!' : 'Product added successfully!'),
             backgroundColor: LPGColors.success,
           ),
         );
@@ -119,7 +160,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to add product: $e'),
+            content: Text('Failed to ${isEditMode ? 'update' : 'add'} product: $e'),
             backgroundColor: LPGColors.error,
           ),
         );
@@ -133,7 +174,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add New Product'),
+        title: Text(isEditMode ? 'Edit Product' : 'Add New Product'),
       ),
       body: Form(
         key: _formKey,

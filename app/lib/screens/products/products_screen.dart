@@ -66,9 +66,12 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
         final matchesSearch = product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
             product.sku.toLowerCase().contains(_searchQuery.toLowerCase());
         final matchesCategory = _selectedCategory == 'All' || product.category == _selectedCategory;
+        
+        // Check product type - handle both 'cylinder' and 'accessory' variations
+        final productType = product.productType.toLowerCase();
         final matchesType = _selectedType == 'All' ||
-            (_selectedType == 'Cylinder' && product.productType == 'cylinder') ||
-            (_selectedType == 'Accessory' && product.productType == 'accessory');
+            (_selectedType == 'Cylinder' && productType == 'cylinder') ||
+            (_selectedType == 'Accessory' && (productType == 'accessory' || productType == 'accessories'));
         
         return matchesSearch && matchesCategory && matchesType;
       }).toList();

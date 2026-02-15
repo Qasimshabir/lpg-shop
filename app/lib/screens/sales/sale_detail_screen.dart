@@ -9,15 +9,17 @@ class SaleDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateTime.parse(sale['createdAt'] ?? DateTime.now().toIso8601String());
-    final items = sale['items'] as List? ?? [];
-    final customer = sale['customer'] as Map<String, dynamic>?;
-    final total = (sale['total'] ?? 0).toDouble();
-    final subtotal = (sale['subtotal'] ?? 0).toDouble();
-    final tax = (sale['tax'] ?? 0).toDouble();
-    final discount = (sale['discountAmount'] ?? 0).toDouble();
-    final paidAmount = (sale['paidAmount'] ?? 0).toDouble();
-    final remainingAmount = (sale['remainingAmount'] ?? 0).toDouble();
+    final date = DateTime.parse(
+      sale['createdAt'] ?? sale['created_at'] ?? sale['sale_date'] ?? DateTime.now().toIso8601String()
+    );
+    final items = (sale['items'] ?? sale['sale_items']) as List? ?? [];
+    final customer = (sale['customer'] ?? sale['lpg_customers']) as Map<String, dynamic>?;
+    final total = (sale['total'] ?? sale['totalAmount'] ?? sale['total_amount'] ?? 0).toDouble();
+    final subtotal = (sale['subtotal'] ?? sale['subTotal'] ?? sale['sub_total'] ?? total).toDouble();
+    final tax = (sale['tax'] ?? sale['taxAmount'] ?? sale['tax_amount'] ?? 0).toDouble();
+    final discount = (sale['discountAmount'] ?? sale['discount_amount'] ?? sale['discount'] ?? 0).toDouble();
+    final paidAmount = (sale['paidAmount'] ?? sale['paid_amount'] ?? total).toDouble();
+    final remainingAmount = (sale['remainingAmount'] ?? sale['remaining_amount'] ?? 0).toDouble();
 
     return Scaffold(
       appBar: AppBar(
@@ -72,7 +74,7 @@ class SaleDetailScreen extends StatelessWidget {
                     Text('Invoice', style: LPGTextStyles.heading2),
                     SizedBox(height: 4),
                     Text(
-                      sale['invoiceNumber'] ?? 'N/A',
+                      sale['invoiceNumber'] ?? sale['invoice_number'] ?? 'N/A',
                       style: LPGTextStyles.body1.copyWith(color: LPGColors.textSecondary),
                     ),
                   ],
@@ -186,11 +188,11 @@ class SaleDetailScreen extends StatelessWidget {
   }
 
   Widget _buildItemRow(Map<String, dynamic> item) {
-    final product = item['product'] as Map<String, dynamic>?;
-    final productName = product?['name'] ?? 'Unknown Product';
+    final product = (item['product'] ?? item['lpg_products']) as Map<String, dynamic>?;
+    final productName = product?['name'] ?? item['product_name'] ?? 'Unknown Product';
     final quantity = item['quantity'] ?? 0;
-    final unitPrice = (item['unitPrice'] ?? 0).toDouble();
-    final subtotal = (item['subtotal'] ?? 0).toDouble();
+    final unitPrice = (item['unitPrice'] ?? item['unit_price'] ?? 0).toDouble();
+    final subtotal = (item['subtotal'] ?? item['sub_total'] ?? (quantity * unitPrice)).toDouble();
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -267,8 +269,8 @@ class SaleDetailScreen extends StatelessWidget {
   }
 
   Widget _buildPaymentInfo(double paidAmount, double remainingAmount, Map<String, dynamic> sale) {
-    final paymentStatus = sale['paymentStatus'] ?? 'Pending';
-    final paymentMethod = sale['paymentMethod'] ?? 'Cash';
+    final paymentStatus = sale['paymentStatus'] ?? sale['payment_status'] ?? 'Pending';
+    final paymentMethod = sale['paymentMethod'] ?? sale['payment_method'] ?? 'Cash';
 
     return Card(
       child: Padding(
@@ -353,8 +355,8 @@ class SaleDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDeliveryInfo(Map<String, dynamic> sale) {
-    final deliveryRequired = sale['deliveryRequired'] ?? false;
-    final deliveryStatus = sale['deliveryStatus'] ?? 'Not Required';
+    final deliveryRequired = sale['deliveryRequired'] ?? sale['delivery_required'] ?? false;
+    final deliveryStatus = sale['deliveryStatus'] ?? sale['delivery_status'] ?? 'Not Required';
 
     return Card(
       child: Padding(

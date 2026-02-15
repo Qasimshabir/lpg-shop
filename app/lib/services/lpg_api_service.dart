@@ -131,21 +131,37 @@ class LPGApiService {
     return LPGProduct.fromJson(data['data']);
   }
 
+  // Helper to convert camelCase to snake_case for backend
+  static Map<String, dynamic> _toSnakeCase(Map<String, dynamic> data) {
+    final result = <String, dynamic>{};
+    data.forEach((key, value) {
+      // Convert camelCase to snake_case
+      final snakeKey = key.replaceAllMapped(
+        RegExp(r'[A-Z]'),
+        (match) => '_${match.group(0)!.toLowerCase()}',
+      );
+      result[snakeKey] = value;
+    });
+    return result;
+  }
+
   static Future<LPGProduct> createLPGProduct(Map<String, dynamic> productData) async {
+    final snakeCaseData = _toSnakeCase(productData);
     final response = await http.post(
       Uri.parse('$_baseUrl/products'),
       headers: await _getHeaders(),
-      body: json.encode(productData),
+      body: json.encode(snakeCaseData),
     );
     final data = _handleResponse(response);
     return LPGProduct.fromJson(data['data']);
   }
 
   static Future<LPGProduct> updateLPGProduct(String id, Map<String, dynamic> productData) async {
+    final snakeCaseData = _toSnakeCase(productData);
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id'),
       headers: await _getHeaders(),
-      body: json.encode(productData),
+      body: json.encode(snakeCaseData),
     );
     final data = _handleResponse(response);
     return LPGProduct.fromJson(data['data']);

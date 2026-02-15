@@ -89,18 +89,23 @@ const createLPGProduct = async (req, res, next) => {
     const productData = {
       user_id: req.user.id,
       name: req.body.name,
-      brand_id: req.body.brand_id || null,
+      brand_id: req.body.brand_id || req.body.brand || null,
       category: req.body.category,
-      weight: req.body.weight || null,
+      weight: req.body.weight || req.body.capacity || null,
       weight_unit: req.body.weight_unit || 'kg',
       price: req.body.price,
-      stock_quantity: req.body.stock_quantity || 0,
-      reorder_level: req.body.reorder_level || 10,
+      stock_quantity: req.body.stock_quantity || req.body.stock || 0,
+      reorder_level: req.body.reorder_level || req.body.min_stock || 10,
       description: req.body.description || null,
       image_url: req.body.image_url || null,
       sku: req.body.sku || null,
       is_active: req.body.is_active !== undefined ? req.body.is_active : true
     };
+
+    // Handle cylinder states if provided
+    if (req.body.cylinder_states && req.body.cylinder_states.filled) {
+      productData.stock_quantity = req.body.cylinder_states.filled;
+    }
 
     if (req.body.image && req.body.image.startsWith('data:image/')) {
       productData.image_url = await saveDataUriToFile(req.body.image, 'products', req.user.id);
@@ -397,12 +402,18 @@ const getCylinderSummary = async (req, res, next) => {
       const key = `${product.weight}kg`;
       if (!acc[key]) {
         acc[key] = {
+          _id: key,
           type: key,
+          totalEmpty: 0,
+          totalFilled: product.stock_quantity || 0,
+          totalSold: 0,
           totalStock: 0,
           products: 0
         };
+      } else {
+        acc[key].totalFilled += product.stock_quantity || 0;
       }
-      acc[key].totalStock += product.stock_quantity;
+      acc[key].totalStock += product.stock_quantity || 0;
       acc[key].products += 1;
       return acc;
     }, {});

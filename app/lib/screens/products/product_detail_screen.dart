@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/lpg_product.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
+import 'add_product_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final LPGProduct product;
@@ -107,9 +108,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             onPressed: _refreshProduct,
           ),
           PopupMenuButton<String>(
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'edit') {
-                _showComingSoon('Edit Product');
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AddProductScreen(product: _product),
+                  ),
+                );
+                if (result == true) {
+                  _refreshProduct();
+                }
               } else if (value == 'delete') {
                 _deleteProduct();
               }
