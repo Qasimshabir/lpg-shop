@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const { connectDB } = require('../config/database');
 const User = require('../models/User');
 const LPGProduct = require('../models/LPGProduct');
 const LPGCustomer = require('../models/LPGCustomer');
@@ -22,10 +23,10 @@ async function seedDatabase() {
       process.exit(1);
     }
     
-    // Connect to MongoDB
+    // Connect to MongoDB using the connection helper
     console.log('📡 Connecting to MongoDB...');
     console.log('🔗 URI:', process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')); // Hide password
-    await mongoose.connect(process.env.MONGO_URI);
+    await connectDB();
     console.log('✅ Connected to MongoDB\n');
     
     // 1. Create Admin User
