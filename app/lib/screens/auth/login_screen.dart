@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/settings_service.dart';
-import '../../widgets/base_url_config_dialog.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'register_screen.dart';
 
@@ -18,8 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  int _tapCount = 0;
-  DateTime? _lastTapTime;
 
   @override
   void dispose() {
@@ -65,44 +62,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleSettingsIconTap() {
-    final now = DateTime.now();
-    
-    // Reset tap count if more than 1 second has passed since last tap
-    if (_lastTapTime == null || now.difference(_lastTapTime!) > const Duration(seconds: 1)) {
-      _tapCount = 1;
-    } else {
-      _tapCount++;
-    }
-    
-    _lastTapTime = now;
-    
-    // Open settings dialog on double tap
-    if (_tapCount >= 2) {
-      _tapCount = 0;
-      _openBaseUrlConfig();
-    }
-  }
-
-  Future<void> _openBaseUrlConfig() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => const BaseUrlConfigDialog(),
-    );
-    
-    if (result == true && mounted) {
-      // Show a message indicating the URL was updated
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Base URL updated to: ${SettingsService.getBaseUrl()}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,13 +76,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Logo and Title
-                  GestureDetector(
-                    onTap: _handleSettingsIconTap,
-                    child: const Icon(
-                      Icons.local_gas_station,
-                      size: 80,
-                      color: Color(0xFFE67E22),
-                    ),
+                  const Icon(
+                    Icons.local_gas_station,
+                    size: 80,
+                    color: Color(0xFFE67E22),
                   ),
                   const SizedBox(height: 16),
                   const Text(
