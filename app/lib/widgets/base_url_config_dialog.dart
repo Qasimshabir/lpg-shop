@@ -162,125 +162,126 @@ class _BaseUrlConfigDialogState extends State<BaseUrlConfigDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              const Text(
-                'Enter the API server URL:',
-                style: TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-              const SizedBox(height: 16),
-              
-              // URL Input Field
-              TextFormField(
-                controller: _urlController,
-                decoration: InputDecoration(
-                  labelText: 'Base URL',
-                  hintText: 'http://192.168.1.100:5000',
-                  prefixIcon: const Icon(Icons.link),
-                  border: const OutlineInputBorder(),
-                  helperText: 'Example: http://192.168.1.100:5000',
-                  errorText: _errorMessage,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 16,
+                const Text(
+                  'Enter the API server URL:',
+                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                const SizedBox(height: 16),
+                
+                // URL Input Field
+                TextFormField(
+                  controller: _urlController,
+                  decoration: InputDecoration(
+                    labelText: 'Base URL',
+                    hintText: 'http://192.168.1.100:5000',
+                    prefixIcon: const Icon(Icons.link),
+                    border: const OutlineInputBorder(),
+                    helperText: 'Example: http://192.168.1.100:5000',
+                    errorText: _errorMessage,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 16,
+                    ),
+                  ),
+                  style: const TextStyle(fontSize: 14),
+                  maxLines: 2,
+                  minLines: 1,
+                  keyboardType: TextInputType.url,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a URL';
+                    }
+                    
+                    if (!SettingsService.isValidUrl(value.trim())) {
+                      return 'Please enter a valid URL (http:// or https://)';
+                    }
+                    
+                    return null;
+                  },
+                  enabled: !_isLoading,
+                ),
+                const SizedBox(height: 16),
+                
+                // Advanced Options Toggle
+                InkWell(
+                  onTap: () {
+                    setState(() => _showAdvanced = !_showAdvanced);
+                  },
+                  child: Row(
+                    children: [
+                      Icon(
+                        _showAdvanced ? Icons.expand_less : Icons.expand_more,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 4),
+                      const Text(
+                        'Advanced Options',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF3498DB),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                style: const TextStyle(fontSize: 14),
-                maxLines: 2,
-                minLines: 1,
-                keyboardType: TextInputType.url,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a URL';
-                  }
-                  
-                  if (!SettingsService.isValidUrl(value.trim())) {
-                    return 'Please enter a valid URL (http:// or https://)';
-                  }
-                  
-                  return null;
-                },
-                enabled: !_isLoading,
-              ),
-              const SizedBox(height: 16),
-              
-              // Advanced Options Toggle
-              InkWell(
-                onTap: () {
-                  setState(() => _showAdvanced = !_showAdvanced);
-                },
-                child: Row(
-                  children: [
-                    Icon(
-                      _showAdvanced ? Icons.expand_less : Icons.expand_more,
-                      size: 20,
+                
+                // Advanced Options
+                if (_showAdvanced) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Advanced Options',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF3498DB),
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Common Configurations:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildQuickOption('Localhost', 'http://localhost:5000'),
+                        _buildQuickOption('Local Network', 'http://192.168.1.100:5000'),
+                        _buildQuickOption('Production', 'https://api.example.com'),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              
-              // Advanced Options
-              if (_showAdvanced) ...[
+                  ),
+                ],
+                
                 const SizedBox(height: 16),
+                
+                // Info Box
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.grey[100],
+                    color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.blue[200]!),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      const Text(
-                        'Common Configurations:',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
+                      Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'The URL will be automatically formatted to include /api',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[900],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      _buildQuickOption('Localhost', 'http://localhost:5000'),
-                      _buildQuickOption('Local Network', 'http://192.168.1.100:5000'),
-                      _buildQuickOption('Production', 'https://api.example.com'),
                     ],
                   ),
                 ),
               ],
-              
-              const SizedBox(height: 16),
-              
-              // Info Box
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, size: 20, color: Colors.blue[700]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'The URL will be automatically formatted to include /api',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.blue[900],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
