@@ -141,22 +141,42 @@ const createLPGCustomer = async (req, res, next) => {
 
 // @desc    Update LPG customer
 // @route   PUT /api/customers/:id
+// @desc    Update LPG customer
+// @route   PUT /api/customers/:id
 // @access  Private
 const updateLPGCustomer = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
     const updateData = {};
+    
+    // Basic fields
     if (req.body.name !== undefined) updateData.name = req.body.name;
     if (req.body.email !== undefined) updateData.email = req.body.email;
     if (req.body.phone !== undefined) updateData.phone = req.body.phone;
+    if (req.body.alternatePhone !== undefined) updateData.alternate_phone = req.body.alternatePhone;
     if (req.body.address !== undefined) updateData.address = req.body.address;
     if (req.body.city !== undefined) updateData.city = req.body.city;
     if (req.body.state !== undefined) updateData.state = req.body.state;
     if (req.body.postal_code !== undefined) updateData.postal_code = req.body.postal_code;
+    if (req.body.postalCode !== undefined) updateData.postal_code = req.body.postalCode;
+    
+    // Customer type fields
     if (req.body.customer_type !== undefined) updateData.customer_type = req.body.customer_type;
+    if (req.body.customerType !== undefined) updateData.customer_type = req.body.customerType;
+    if (req.body.businessName !== undefined) updateData.business_name = req.body.businessName;
+    if (req.body.gstNumber !== undefined) updateData.gst_number = req.body.gstNumber;
+    
+    // Credit and preferences
+    if (req.body.creditLimit !== undefined) updateData.credit_limit = req.body.creditLimit;
+    if (req.body.preferredCylinderCapacity !== undefined) updateData.preferred_cylinder_capacity = req.body.preferredCylinderCapacity;
+    
+    // Status and notes
     if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
+    if (req.body.isActive !== undefined) updateData.is_active = req.body.isActive;
     if (req.body.notes !== undefined) updateData.notes = req.body.notes;
+
+    updateData.updated_at = new Date().toISOString();
 
     const { data: customer, error } = await supabase
       .from('lpg_customers')

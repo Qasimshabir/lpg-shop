@@ -332,7 +332,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                 children: recentTrends.map((day) {
                   final revenue = (day['revenue'] as num).toDouble();
                   final date = DateTime.parse(day['date']);
-                  final height = maxRevenue > 0 ? (revenue / maxRevenue * 150) : 0;
+                  final height = maxRevenue > 0 ? (revenue / maxRevenue * 150).toDouble() : 0.0;
 
                   return Expanded(
                     child: Padding(

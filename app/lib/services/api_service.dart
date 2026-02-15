@@ -845,6 +845,40 @@ class ApiService {
     return data;
   }
 
+  // Generic HTTP methods for flexibility
+  static Future<Map<String, dynamic>> get(String endpoint) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl$endpoint'),
+      headers: _getHeaders(),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> post(String endpoint, Map<String, dynamic> body) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl$endpoint'),
+      headers: _getHeaders(),
+      body: json.encode(body),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> put(String endpoint, Map<String, dynamic> body) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl$endpoint'),
+      headers: _getHeaders(),
+      body: json.encode(body),
+    );
+    return _handleResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> delete(String endpoint) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl$endpoint'),
+      headers: _getHeaders(),
+    );
+    return _handleResponse(response);
+  }
 }
 
 
