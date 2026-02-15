@@ -138,8 +138,8 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Revenue',
-                '₹${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
-                Icons.currency_rupee,
+                'Rs. ${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
+                Icons.attach_money,
                 LPGColors.success,
               ),
             ),
@@ -160,7 +160,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Avg Sale',
-                '₹${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
+                'Rs. ${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.trending_up,
                 LPGColors.warning,
               ),
@@ -444,57 +444,70 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
           style: LPGTextStyles.heading3,
         ),
         SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
+        Column(
           children: [
-            _buildActionCard(
-              'New Sale',
-              Icons.add_shopping_cart,
-              LPGColors.primary,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SalesScreen()),
-                );
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    'New Sale',
+                    Icons.add_shopping_cart,
+                    LPGColors.primary,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SalesScreen()),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildActionCard(
+                    'Add Product',
+                    Icons.add_box,
+                    LPGColors.secondary,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ProductsScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
-            _buildActionCard(
-              'Add Product',
-              Icons.add_box,
-              LPGColors.secondary,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ProductsScreen()),
-                );
-              },
-            ),
-            _buildActionCard(
-              'Manage Customers',
-              Icons.people_alt,
-              LPGColors.success,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CustomersScreen()),
-                );
-              },
-            ),
-            _buildActionCard(
-              'View Reports',
-              Icons.analytics,
-              LPGColors.info,
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ReportsScreen()),
-                );
-              },
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    'Manage Customers',
+                    Icons.people_alt,
+                    LPGColors.success,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CustomersScreen()),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: _buildActionCard(
+                    'View Reports',
+                    Icons.analytics,
+                    LPGColors.info,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ReportsScreen()),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -507,10 +520,12 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
+        child: Container(
           padding: EdgeInsets.all(16),
+          constraints: BoxConstraints(minHeight: 100),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 32, color: color),
               SizedBox(height: 8),
@@ -520,6 +535,8 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -73,6 +73,7 @@ app.use('/api/categories', require('./routes/categoryRoutes'));
 app.use('/api/cylinders', require('./routes/cylinderRoutes'));
 app.use('/api/safety', require('./routes/safetyRoutes'));
 app.use('/api/delivery', require('./routes/deliveryRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 // app.use('/api/images', require('./routes/imageRoutes')); // To be implemented
 
 // Health check endpoint

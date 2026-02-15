@@ -9,6 +9,11 @@ import '../screens/customers/customers_screen.dart';
 import '../screens/reports/reports_screen.dart';
 import '../screens/profile/profile_screen.dart';
 import '../screens/feedback/feedback_screen.dart';
+import '../screens/cylinders/cylinder_tracking_screen.dart';
+import '../screens/settings/settings_screen.dart';
+import '../screens/delivery/delivery_screen.dart';
+import '../screens/safety/safety_screen.dart';
+import '../screens/insights/business_insights_screen.dart';
 
 class AppDrawer extends StatelessWidget {
   final String currentRoute;
@@ -48,7 +53,7 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.propane_tank,
                     title: 'Cylinder Tracking',
                     route: '/cylinders',
-                    onTap: () => _showComingSoon(context, 'Cylinder Tracking'),
+                    onTap: () => _navigateTo(context, const CylinderTrackingScreen()),
                   ),
                   Divider(height: 1),
                   _buildSectionHeader('OPERATIONS'),
@@ -71,7 +76,7 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.local_shipping,
                     title: 'Delivery',
                     route: '/delivery',
-                    onTap: () => _showComingSoon(context, 'Delivery Management'),
+                    onTap: () => _navigateTo(context, const DeliveryScreen()),
                   ),
                   Divider(height: 1),
                   _buildSectionHeader('ANALYTICS'),
@@ -87,7 +92,7 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.trending_up,
                     title: 'Business Insights',
                     route: '/insights',
-                    onTap: () => _showComingSoon(context, 'Business Insights'),
+                    onTap: () => _navigateTo(context, const BusinessInsightsScreen()),
                   ),
                   Divider(height: 1),
                   _buildSectionHeader('SAFETY & COMPLIANCE'),
@@ -96,14 +101,14 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.security,
                     title: 'Safety Checklists',
                     route: '/safety',
-                    onTap: () => _showComingSoon(context, 'Safety Checklists'),
+                    onTap: () => _navigateTo(context, const SafetyScreen()),
                   ),
                   _buildDrawerItem(
                     context,
                     icon: Icons.warning,
                     title: 'Incidents',
                     route: '/incidents',
-                    onTap: () => _showComingSoon(context, 'Incident Reports'),
+                    onTap: () => _navigateTo(context, const SafetyScreen()),
                   ),
                   Divider(height: 1),
                   _buildSectionHeader('ACCOUNT'),
@@ -126,7 +131,7 @@ class AppDrawer extends StatelessWidget {
                     icon: Icons.settings,
                     title: 'Settings',
                     route: '/settings',
-                    onTap: () => _showComingSoon(context, 'Settings'),
+                    onTap: () => _navigateTo(context, const SettingsScreen()),
                   ),
                 ],
               ),
