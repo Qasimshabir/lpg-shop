@@ -6,9 +6,16 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const logger = require('./config/logger');
+const { connectDB } = require('./config/database');
 const { requestLogger, detailedLogger } = require('./middleware/requestLogger');
 
 const app = express();
+
+// Connect to MongoDB with caching for serverless
+connectDB().catch(err => {
+  logger.error('Failed to connect to MongoDB:', err);
+  console.error('Failed to connect to MongoDB:', err.message);
+});
 
 // Request logging middleware (should be early in the chain)
 app.use(requestLogger);
@@ -53,6 +60,21 @@ app.use(cors({
 // Built-in middlewares
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+
+// Ensure MongoDB connection before handling requests (middleware)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    logger.error('Database connection error:', error);
+    res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
 
 // Routes
 app.use('/api', require('./routes/authRoutes'));
@@ -171,21 +193,6 @@ app.use('*', (req, res) => {
     message: 'Route not found'
   });
 });
-
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    logger.info('✅ MongoDB Connected Successfully');
-    console.log('✅ MongoDB Connected Successfully');
-  })
-  .catch((err) => {
-    logger.error('❌ MongoDB Connection Error:', { error: err.message, stack: err.stack });
-    console.error('❌ MongoDB Connection Error:', err.message);
-    // Don't exit in serverless environment
-    if (process.env.NODE_ENV !== 'production') {
-      process.exit(1);
-    }
-  });
 
 // Start Server (only if not in serverless environment)
 if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
