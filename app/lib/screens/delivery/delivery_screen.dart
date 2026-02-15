@@ -193,7 +193,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     final dateStr = route['date'];
     final date = dateStr != null ? DateTime.parse(dateStr) : DateTime.now();
     final status = route['status'] ?? 'planned';
-    final personnel = route['personnel'] ?? route['delivery_personnel'] ?? {};
+    final personnel = route['delivery_personnel'];
+    
+    // Get user name from nested structure
+    String personnelName = 'Unassigned';
+    if (personnel != null) {
+      final users = personnel['users'];
+      if (users != null && users is Map) {
+        personnelName = users['name'] ?? 'Unknown';
+      } else if (users != null && users is List && users.isNotEmpty) {
+        personnelName = users[0]['name'] ?? 'Unknown';
+      }
+    }
 
     Color statusColor;
     switch (status) {
@@ -243,7 +254,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
               children: [
                 Icon(Icons.person, size: 16, color: LPGColors.textSecondary),
                 SizedBox(width: 8),
-                Text(personnel['name'] ?? 'Unassigned'),
+                Text(personnelName),
               ],
             ),
             if (status == 'planned') ...[
@@ -282,7 +293,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   }
 
   Widget _buildPersonnelCard(Map<String, dynamic> person) {
-    final user = person['user'] ?? {};
+    // Get user data from nested structure
+    final users = person['users'];
+    String userName = 'Unknown';
+    if (users != null && users is Map) {
+      userName = users['name'] ?? 'Unknown';
+    } else if (users != null && users is List && users.isNotEmpty) {
+      userName = users[0]['name'] ?? 'Unknown';
+    }
+    
     final isAvailable = person['is_available'] ?? person['isAvailable'] ?? false;
     final vehicleNumber = person['vehicle_number'] ?? person['vehicleNumber'];
     final phone = person['phone'];
@@ -297,7 +316,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             color: isAvailable ? LPGColors.success : LPGColors.error,
           ),
         ),
-        title: Text(user['name'] ?? 'Unknown'),
+        title: Text(userName),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -353,9 +372,17 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             itemCount: _personnel.length,
             itemBuilder: (context, index) {
               final person = _personnel[index];
-              final user = person['user'] ?? {};
+              final users = person['users'];
+              String userName = 'Unknown';
+              if (users != null && users is Map) {
+                userName = users['name'] ?? 'Unknown';
+              } else if (users != null && users is List && users.isNotEmpty) {
+                userName = users[0]['name'] ?? 'Unknown';
+              }
+              
               return ListTile(
-                title: Text(user['name'] ?? 'Unknown'),
+                title: Text(userName),
+                subtitle: Text(person['vehicle_number'] ?? 'No vehicle'),
                 onTap: () => Navigator.pop(context, person),
               );
             },
