@@ -15,9 +15,12 @@ class SettingsService {
   /// Get the configured Base URL or return default
   static String getBaseUrl() {
     if (_prefs == null) {
+      print('⚠️ SettingsService: SharedPreferences not initialized, returning default');
       return _defaultBaseUrl;
     }
-    return _prefs!.getString(_baseUrlKey) ?? _defaultBaseUrl;
+    final url = _prefs!.getString(_baseUrlKey) ?? _defaultBaseUrl;
+    print('✅ SettingsService: Getting Base URL: $url');
+    return url;
   }
 
   /// Save a new Base URL
@@ -25,15 +28,21 @@ class SettingsService {
     if (_prefs == null) {
       await init();
     }
-    return await _prefs!.setString(_baseUrlKey, url);
+    print('💾 SettingsService: Saving Base URL: $url');
+    final result = await _prefs!.setString(_baseUrlKey, url);
+    print('✅ SettingsService: Save result: $result');
+    return result;
   }
 
   /// Check if a custom Base URL has been configured
   static bool hasCustomBaseUrl() {
     if (_prefs == null) {
+      print('⚠️ SettingsService: SharedPreferences not initialized for hasCustomBaseUrl check');
       return false;
     }
-    return _prefs!.containsKey(_baseUrlKey);
+    final hasCustom = _prefs!.containsKey(_baseUrlKey);
+    print('🔍 SettingsService: Has custom URL: $hasCustom');
+    return hasCustom;
   }
 
   /// Reset Base URL to default

@@ -250,6 +250,12 @@ class ApiService {
     required String identifier,
     required String password,
   }) async {
+    if (kDebugMode) {
+      debugPrint('=== API SERVICE LOGIN DEBUG ===');
+      debugPrint('Base URL being used: $_baseUrl');
+      debugPrint('Full login URL: $_baseUrl/login');
+    }
+    
     final response = await http.post(
       Uri.parse('$_baseUrl/login'),
       headers: _getHeaders(),
@@ -258,6 +264,11 @@ class ApiService {
         'password': password,
       }),
     );
+
+    if (kDebugMode) {
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
+    }
 
     final data = _handleResponse(response);
     await _saveToken(data['data']['token']);

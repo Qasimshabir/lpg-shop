@@ -34,6 +34,12 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Debug: Show current base URL
+      final currentUrl = SettingsService.getBaseUrl();
+      debugPrint('=== LOGIN DEBUG ===');
+      debugPrint('Current Base URL: $currentUrl');
+      debugPrint('Has Custom URL: ${SettingsService.hasCustomBaseUrl()}');
+      
       await ApiService.login(
         identifier: _identifierController.text.trim(),
         password: _passwordController.text,
@@ -50,6 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
