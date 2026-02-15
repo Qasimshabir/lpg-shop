@@ -104,6 +104,8 @@ app.get('/api/health', (req, res) => {
 
 // Debug endpoint (only for checking if env vars are loaded)
 app.get('/api/debug/env', (req, res) => {
+  const { getConnectionStatus } = require('./config/database');
+  
   res.status(200).json({
     success: true,
     environment: process.env.NODE_ENV,
@@ -112,6 +114,7 @@ app.get('/api/debug/env', (req, res) => {
     mongoUri: process.env.MONGO_URI ? 
       process.env.MONGO_URI.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@') : 
       'NOT SET',
+    connectionStatus: getConnectionStatus(),
     timestamp: new Date().toISOString()
   });
 });

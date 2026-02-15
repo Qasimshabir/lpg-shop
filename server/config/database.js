@@ -30,7 +30,8 @@ function encodeMongoURI(uri) {
 
 /**
  * Connect to MongoDB with connection caching for serverless environments
- * This prevents creating new connections on every function invocation
+ * Following MongoDB Node.js Driver best practices
+ * https://www.mongodb.com/docs/drivers/node/current/
  */
 async function connectDB() {
   // If we have a cached connection and it's ready, use it
@@ -54,20 +55,42 @@ async function connectDB() {
     // Encode the URI properly
     const encodedURI = encodeMongoURI(process.env.MONGO_URI);
     
+    // MongoDB connection options following best practices
     const options = {
-      serverSelectionTimeoutMS: 10000, // Timeout after 10s
-      socketTimeoutMS: 45000,
+      // Connection pool settings
       maxPoolSize: 10,
       minPoolSize: 2,
+      
+      // Timeout settings
+      serverSelectionTimeoutMS: 10000, // 10 seconds
+      socketTimeoutMS: 45000, // 45 seconds
+      connectTimeoutMS: 10000, // 10 seconds
+      
+      // Retry settings
       retryWrites: true,
-      w: 'majority'
+      retryReads: true,
+      
+      // Write concern
+      w: 'majority',
+      
+      // Read preference
+      readPreference: 'primaryPreferred',
+      
+      // Compression
+      compressors: ['zlib'],
+      
+      // Monitoring
+      monitorCommands: process.env.NODE_ENV === 'development',
     };
 
+    // Connect to MongoDB
     await mongoose.connect(encodedURI, options);
     
     cachedConnection = mongoose.connection;
     
     console.log('✅ MongoDB connected successfully');
+    console.log('   Database:', mongoose.connection.db.databaseName);
+    console.log('   Host:', mongoose.connection.host);
     
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -80,6 +103,17 @@ async function connectDB() {
       cachedConnection = null;
     });
 
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+    });
+
+    // Graceful shutdown
+    process.on('SIGINT', async () => {
+      await mongoose.connection.close();
+      console.log('MongoDB connection closed through app termination');
+      process.exit(0);
+    });
+
     return cachedConnection;
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error.message);
@@ -89,4 +123,17 @@ async function connectDB() {
   }
 }
 
-module.exports = { connectDB, encodeMongoURI };
+/**
+ * Get connection status
+ */
+function getConnectionStatus() {
+  const states = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting',
+  };
+  return states[mongoose.connection.readyState] || 'unknown';
+}
+
+module.exports = { connectDB, encodeMongoURI, getConnectionStatus };

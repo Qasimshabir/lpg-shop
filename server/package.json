@@ -10,7 +10,8 @@
     "seed:database": "node seeders/databaseSeeder.js",
     "seed:production": "node seed-production.js",
     "test:vercel": "node test-vercel-apis.js",
-    "test:admin": "node test-admin-login.js"
+    "test:admin": "node test-admin-login.js",
+    "test:mongo": "node test-mongo-connection.js"
   },
   "keywords": [
     "lpg",
