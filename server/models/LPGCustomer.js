@@ -405,7 +405,7 @@ lpgCustomerSchema.methods.removePremises = function(premisesId) {
 
 // Method to add refill record
 lpgCustomerSchema.methods.addRefillRecord = function(refillData) {
-  // Calculate loyalty points (1 point per 10 rupees spent)
+  // Calculate loyalty points (1 point per Rs 10 spent)
   const pointsEarned = Math.floor(refillData.totalAmount / 10);
   this.loyaltyPoints += pointsEarned;
   this.totalSpent += refillData.totalAmount;

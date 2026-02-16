@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../lpg_theme.dart';
 
@@ -210,14 +210,14 @@ class SaleDetailScreen extends StatelessWidget {
                 Text(productName, style: LPGTextStyles.body1),
                 SizedBox(height: 4),
                 Text(
-                  '$quantity × ₹${unitPrice.toStringAsFixed(2)}',
+                  '$quantity × Rs${unitPrice.toStringAsFixed(2)}',
                   style: LPGTextStyles.caption,
                 ),
               ],
             ),
           ),
           Text(
-            '₹${subtotal.toStringAsFixed(2)}',
+            'Rs${subtotal.toStringAsFixed(2)}',
             style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success),
           ),
         ],
@@ -259,7 +259,7 @@ class SaleDetailScreen extends StatelessWidget {
           style: isBold ? LPGTextStyles.subtitle1 : LPGTextStyles.body2,
         ),
         Text(
-          '₹${amount.abs().toStringAsFixed(2)}',
+          'Rs${amount.abs().toStringAsFixed(2)}',
           style: (isBold ? LPGTextStyles.heading3 : LPGTextStyles.body1).copyWith(
             color: color ?? (isBold ? LPGColors.success : null),
           ),
@@ -301,7 +301,7 @@ class SaleDetailScreen extends StatelessWidget {
               children: [
                 Text('Paid Amount', style: LPGTextStyles.body2),
                 Text(
-                  '₹${paidAmount.toStringAsFixed(2)}',
+                  'Rs${paidAmount.toStringAsFixed(2)}',
                   style: LPGTextStyles.body1.copyWith(color: LPGColors.success),
                 ),
               ],
@@ -313,7 +313,7 @@ class SaleDetailScreen extends StatelessWidget {
                 children: [
                   Text('Remaining', style: LPGTextStyles.body2),
                   Text(
-                    '₹${remainingAmount.toStringAsFixed(2)}',
+                    'Rs${remainingAmount.toStringAsFixed(2)}',
                     style: LPGTextStyles.body1.copyWith(color: LPGColors.error),
                   ),
                 ],

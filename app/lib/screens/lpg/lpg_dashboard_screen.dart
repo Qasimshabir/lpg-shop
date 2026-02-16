@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../models/lpg_product.dart';
 import '../../models/lpg_customer.dart';
@@ -138,7 +138,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Revenue',
-                '₹${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
+                'Rs${((salesSummary['totalRevenue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.attach_money,
                 LPGColors.success,
               ),
@@ -160,7 +160,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Avg Sale',
-                '₹${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
+                'Rs${((salesSummary['avgSaleValue'] ?? 0) as num).toStringAsFixed(0)}',
                 Icons.trending_up,
                 LPGColors.warning,
               ),

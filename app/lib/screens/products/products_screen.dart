@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lpg_product.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
@@ -243,7 +243,7 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildInfoChip('Price', '₹${product.price.toStringAsFixed(0)}', LPGColors.success),
+                  _buildInfoChip('Price', 'Rs${product.price.toStringAsFixed(0)}', LPGColors.success),
                   if (product.productType == 'cylinder')
                     _buildInfoChip('Available', '${product.availableCylinders}', LPGColors.info)
                   else

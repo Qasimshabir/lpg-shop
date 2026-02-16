@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
@@ -105,7 +105,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Expanded(
                   child: _buildStatBox(
                     'Revenue',
-                    '₹${totalRevenue.toStringAsFixed(0)}',
+                    'Rs${totalRevenue.toStringAsFixed(0)}',
                     Icons.attach_money,
                     LPGColors.success,
                   ),
@@ -115,7 +115,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             SizedBox(height: 12),
             _buildStatBox(
               'Average Sale',
-              '₹${avgSale.toStringAsFixed(0)}',
+              'Rs${avgSale.toStringAsFixed(0)}',
               Icons.trending_up,
               LPGColors.info,
             ),
@@ -504,8 +504,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Text('Sales Summary', style: LPGTextStyles.subtitle1),
                   SizedBox(height: 8),
                   _buildReportRow('Total Sales', '${report['summary']?['totalSales'] ?? 0}'),
-                  _buildReportRow('Total Revenue', '₹${((report['summary']?['totalRevenue'] ?? 0) as num).toStringAsFixed(2)}'),
-                  _buildReportRow('Average Sale', '₹${((report['summary']?['avgSaleValue'] ?? 0) as num).toStringAsFixed(2)}'),
+                  _buildReportRow('Total Revenue', 'Rs${((report['summary']?['totalRevenue'] ?? 0) as num).toStringAsFixed(2)}'),
+                  _buildReportRow('Average Sale', 'Rs${((report['summary']?['avgSaleValue'] ?? 0) as num).toStringAsFixed(2)}'),
                   Divider(),
                   Text('Payment Status', style: LPGTextStyles.subtitle1),
                   SizedBox(height: 8),

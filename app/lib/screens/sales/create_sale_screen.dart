@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lpg_customer.dart';
 import '../../models/lpg_product.dart';
 import '../../services/lpg_api_service.dart';
@@ -240,14 +240,14 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                 Text(item['productName'], style: LPGTextStyles.body1),
                 SizedBox(height: 4),
                 Text(
-                  '${item['quantity']} x ₹${item['unitPrice'].toStringAsFixed(0)}',
+                  '${item['quantity']} x Rs${item['unitPrice'].toStringAsFixed(0)}',
                   style: LPGTextStyles.caption,
                 ),
               ],
             ),
           ),
           Text(
-            '₹${item['subtotal'].toStringAsFixed(0)}',
+            'Rs${item['subtotal'].toStringAsFixed(0)}',
             style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success),
           ),
           IconButton(
@@ -294,7 +294,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _discountController,
-              decoration: InputDecoration(labelText: 'Discount', prefixText: '₹ '),
+              decoration: InputDecoration(labelText: 'Discount', prefixText: 'Rs '),
               keyboardType: TextInputType.number,
               onChanged: (_) => setState(() {}),
             ),
@@ -319,7 +319,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Subtotal:', style: LPGTextStyles.body1),
-                Text('₹${_subtotal.toStringAsFixed(2)}', style: LPGTextStyles.body1),
+                Text('Rs${_subtotal.toStringAsFixed(2)}', style: LPGTextStyles.body1),
               ],
             ),
             if (_discount > 0) ...[
@@ -328,7 +328,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Discount:', style: LPGTextStyles.body2.copyWith(color: LPGColors.error)),
-                  Text('-₹${_discount.toStringAsFixed(2)}', style: LPGTextStyles.body2.copyWith(color: LPGColors.error)),
+                  Text('-Rs${_discount.toStringAsFixed(2)}', style: LPGTextStyles.body2.copyWith(color: LPGColors.error)),
                 ],
               ),
             ],
@@ -337,7 +337,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Total:', style: LPGTextStyles.heading3),
-                Text('₹${_total.toStringAsFixed(2)}', style: LPGTextStyles.heading3.copyWith(color: LPGColors.success)),
+                Text('Rs${_total.toStringAsFixed(2)}', style: LPGTextStyles.heading3.copyWith(color: LPGColors.success)),
               ],
             ),
             SizedBox(height: 16),
@@ -417,7 +417,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                     return ListTile(
                       leading: Icon(product.productType == 'cylinder' ? Icons.propane_tank : Icons.build),
                       title: Text(product.displayName),
-                      subtitle: Text('₹${product.price.toStringAsFixed(0)} • Stock: ${product.availableCylinders}'),
+                      subtitle: Text('Rs${product.price.toStringAsFixed(0)} • Stock: ${product.availableCylinders}'),
                       trailing: Icon(Icons.add_circle, color: LPGColors.primary),
                       onTap: () {
                         Navigator.pop(context);
@@ -482,7 +482,7 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
           SizedBox(height: 16),
           TextFormField(
             initialValue: _unitPrice.toString(),
-            decoration: InputDecoration(labelText: 'Unit Price', prefixText: '₹ '),
+            decoration: InputDecoration(labelText: 'Unit Price', prefixText: 'Rs '),
             keyboardType: TextInputType.number,
             onChanged: (v) => setState(() => _unitPrice = double.tryParse(v) ?? widget.product.price),
           ),
@@ -497,7 +497,7 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Subtotal:', style: LPGTextStyles.body1),
-                Text('₹${subtotal.toStringAsFixed(2)}', style: LPGTextStyles.subtitle1.copyWith(color: LPGColors.success)),
+                Text('Rs${subtotal.toStringAsFixed(2)}', style: LPGTextStyles.subtitle1.copyWith(color: LPGColors.success)),
               ],
             ),
           ),

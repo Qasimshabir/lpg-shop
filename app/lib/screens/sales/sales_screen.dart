@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
@@ -139,7 +139,7 @@ class _SalesScreenState extends State<SalesScreen> {
           ),
           SizedBox(height: 8),
           Text(
-            '₹${_totalRevenue.toStringAsFixed(2)}',
+            'Rs${_totalRevenue.toStringAsFixed(2)}',
             style: LPGTextStyles.heading1.copyWith(
               color: Colors.white,
               fontSize: 32,
@@ -220,7 +220,7 @@ class _SalesScreenState extends State<SalesScreen> {
                     ),
                   ),
                   Text(
-                    '₹${amount.toStringAsFixed(2)}',
+                    'Rs${amount.toStringAsFixed(2)}',
                     style: LPGTextStyles.heading3.copyWith(
                       color: LPGColors.success,
                     ),

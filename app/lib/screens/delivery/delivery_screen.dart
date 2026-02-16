@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/api_service.dart';
@@ -156,7 +156,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             SizedBox(height: 4),
             Text(address, maxLines: 2, overflow: TextOverflow.ellipsis),
             SizedBox(height: 4),
-            Text('₹${amount.toStringAsFixed(0)}', style: TextStyle(color: LPGColors.success)),
+            Text('Rs${amount.toStringAsFixed(0)}', style: TextStyle(color: LPGColors.success)),
           ],
         ),
         trailing: ElevatedButton(

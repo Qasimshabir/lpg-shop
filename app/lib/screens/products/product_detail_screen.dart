@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lpg_product.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
@@ -335,7 +335,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Text(label, style: LPGTextStyles.caption),
           SizedBox(height: 4),
           Text(
-            '₹${amount.toStringAsFixed(0)}',
+            'Rs${amount.toStringAsFixed(0)}',
             style: LPGTextStyles.subtitle1.copyWith(
               color: color,
               fontWeight: FontWeight.bold,

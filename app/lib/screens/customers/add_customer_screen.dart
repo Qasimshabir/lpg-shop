@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../models/lpg_customer.dart';
 import '../../lpg_theme.dart';
@@ -353,7 +353,7 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _creditLimitController,
-              decoration: InputDecoration(labelText: 'Credit Limit', prefixText: '₹ '),
+              decoration: InputDecoration(labelText: 'Credit Limit', prefixText: 'Rs '),
               keyboardType: TextInputType.number,
             ),
           ],

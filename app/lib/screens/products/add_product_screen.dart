@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../services/lpg_api_service.dart';
 import '../../models/lpg_product.dart';
 import '../../lpg_theme.dart';
@@ -358,7 +358,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               controller: _priceController,
               decoration: InputDecoration(
                 labelText: 'Selling Price *',
-                prefixText: '₹ ',
+                prefixText: 'Rs ',
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
@@ -372,7 +372,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               controller: _costPriceController,
               decoration: InputDecoration(
                 labelText: 'Cost Price *',
-                prefixText: '₹ ',
+                prefixText: 'Rs ',
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
@@ -387,7 +387,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 controller: _depositAmountController,
                 decoration: InputDecoration(
                   labelText: 'Deposit Amount',
-                  prefixText: '₹ ',
+                  prefixText: 'Rs ',
                 ),
                 keyboardType: TextInputType.number,
               ),
@@ -396,7 +396,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 controller: _refillPriceController,
                 decoration: InputDecoration(
                   labelText: 'Refill Price',
-                  prefixText: '₹ ',
+                  prefixText: 'Rs ',
                 ),
                 keyboardType: TextInputType.number,
               ),

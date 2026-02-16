@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lpg_customer.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
@@ -235,7 +235,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 children: [
                   _buildInfoChip('Type', customer.customerType, LPGColors.info),
                   _buildInfoChip('Refills', '${customer.totalRefills}', LPGColors.success),
-                  _buildInfoChip('Spent', '₹${customer.totalSpent.toStringAsFixed(0)}', LPGColors.secondary),
+                  _buildInfoChip('Spent', 'Rs${customer.totalSpent.toStringAsFixed(0)}', LPGColors.secondary),
                 ],
               ),
               if (customer.isDueForRefill) ...[

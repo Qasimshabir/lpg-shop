@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../models/lpg_customer.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
@@ -184,7 +184,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               children: [
                 Expanded(child: _buildStatBox('Total Refills', '${_customer.totalRefills}', Icons.propane_tank, LPGColors.primary)),
                 SizedBox(width: 12),
-                Expanded(child: _buildStatBox('Total Spent', '₹${_customer.totalSpent.toStringAsFixed(0)}', Icons.currency_rupee, LPGColors.success)),
+                Expanded(child: _buildStatBox('Total Spent', 'Rs${_customer.totalSpent.toStringAsFixed(0)}', Icons.attach_money, LPGColors.success)),
               ],
             ),
             SizedBox(height: 12),
@@ -192,7 +192,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               children: [
                 Expanded(child: _buildStatBox('Loyalty Points', '${_customer.loyaltyPoints}', Icons.stars, LPGColors.warning)),
                 SizedBox(width: 12),
-                Expanded(child: _buildStatBox('Credit Used', '₹${_customer.currentCredit.toStringAsFixed(0)}', Icons.account_balance_wallet, LPGColors.info)),
+                Expanded(child: _buildStatBox('Credit Used', 'Rs${_customer.currentCredit.toStringAsFixed(0)}', Icons.account_balance_wallet, LPGColors.info)),
               ],
             ),
           ],
@@ -333,7 +333,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
               ],
             ),
           ),
-          Text('₹${refill.totalAmount.toStringAsFixed(0)}', style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success)),
+          Text('Rs${refill.totalAmount.toStringAsFixed(0)}', style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success)),
         ],
       ),
     );
@@ -409,7 +409,7 @@ class _AddRefillDialogState extends State<_AddRefillDialog> {
             SizedBox(height: 16),
             TextFormField(
               controller: _priceController,
-              decoration: InputDecoration(labelText: 'Price per Unit', prefixText: '₹ '),
+              decoration: InputDecoration(labelText: 'Price per Unit', prefixText: 'Rs '),
               keyboardType: TextInputType.number,
             ),
             SizedBox(height: 16),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/api_service.dart';
@@ -98,7 +98,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                 Expanded(
                   child: _buildMetricBox(
                     'Total Revenue',
-                    '₹${totalRevenue.toStringAsFixed(0)}',
+                    'Rs${totalRevenue.toStringAsFixed(0)}',
                     Icons.attach_money,
                     LPGColors.success,
                   ),
@@ -120,7 +120,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                 Expanded(
                   child: _buildMetricBox(
                     'Avg Sale Value',
-                    '₹${avgSaleValue.toStringAsFixed(0)}',
+                    'Rs${avgSaleValue.toStringAsFixed(0)}',
                     Icons.trending_up,
                     LPGColors.info,
                   ),
@@ -275,7 +275,7 @@ class _BusinessInsightsScreenState extends State<BusinessInsightsScreen> {
                       ),
                     ),
                     Text(
-                      '₹${revenue.toStringAsFixed(0)}',
+                      'Rs${revenue.toStringAsFixed(0)}',
                       style: LPGTextStyles.subtitle2.copyWith(color: LPGColors.success),
                     ),
                   ],
