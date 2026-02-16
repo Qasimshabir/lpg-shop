@@ -1,5 +1,6 @@
 const { getSupabaseClient } = require('../config/supabase');
 const { saveDataUriToFile } = require('../utils/fileStorage');
+const { uploadImage, deleteImage, extractFilePathFromUrl, validateImage } = require('../utils/supabaseStorage');
 
 // @desc    Get all LPG products
 // @route   GET /api/products
@@ -117,8 +118,34 @@ const createLPGProduct = async (req, res, next) => {
       productData.stock_quantity = req.body.cylinder_states.filled;
     }
 
+    // Handle image upload to Supabase Storage
     if (req.body.image && req.body.image.startsWith('data:image/')) {
-      productData.image_url = await saveDataUriToFile(req.body.image, 'products', req.user.id);
+      // Extract base64 data
+      const matches = req.body.image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        const fileName = `product-${Date.now()}.${matches[1]}`;
+        
+        // Validate image
+        const validation = validateImage(imageBuffer, fileName);
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: validation.error
+          });
+        }
+        
+        // Upload to Supabase Storage
+        const uploadResult = await uploadImage(imageBuffer, fileName);
+        if (uploadResult.success) {
+          productData.image_url = uploadResult.url;
+        } else {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to upload image: ' + uploadResult.error
+          });
+        }
+      }
     }
 
     const { data: product, error } = await supabase
@@ -173,8 +200,50 @@ const updateLPGProduct = async (req, res, next) => {
     if (req.body.sku !== undefined) updateData.sku = req.body.sku;
     if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
 
+    // Handle image upload to Supabase Storage
     if (req.body.image && req.body.image.startsWith('data:image/')) {
-      updateData.image_url = await saveDataUriToFile(req.body.image, 'products', req.user.id);
+      // Get existing product to delete old image
+      const { data: existingProduct } = await supabase
+        .from('lpg_products')
+        .select('image_url')
+        .eq('id', req.params.id)
+        .eq('user_id', req.user.id)
+        .single();
+      
+      // Extract base64 data
+      const matches = req.body.image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const imageBuffer = Buffer.from(matches[2], 'base64');
+        const fileName = `product-${Date.now()}.${matches[1]}`;
+        
+        // Validate image
+        const validation = validateImage(imageBuffer, fileName);
+        if (!validation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: validation.error
+          });
+        }
+        
+        // Delete old image if exists
+        if (existingProduct?.image_url) {
+          const oldFilePath = extractFilePathFromUrl(existingProduct.image_url);
+          if (oldFilePath) {
+            await deleteImage(oldFilePath);
+          }
+        }
+        
+        // Upload new image to Supabase Storage
+        const uploadResult = await uploadImage(imageBuffer, fileName);
+        if (uploadResult.success) {
+          updateData.image_url = uploadResult.url;
+        } else {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to upload image: ' + uploadResult.error
+          });
+        }
+      }
     } else if (req.body.image_url !== undefined) {
       updateData.image_url = req.body.image_url;
     }
@@ -206,6 +275,14 @@ const deleteLPGProduct = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
+    // Get product to delete image
+    const { data: product } = await supabase
+      .from('lpg_products')
+      .select('image_url')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+    
     const { data, error } = await supabase
       .from('lpg_products')
       .delete()
@@ -220,6 +297,14 @@ const deleteLPGProduct = async (req, res, next) => {
         success: false,
         message: 'Product not found'
       });
+    }
+
+    // Delete image from Supabase Storage if exists
+    if (product?.image_url) {
+      const filePath = extractFilePathFromUrl(product.image_url);
+      if (filePath) {
+        await deleteImage(filePath);
+      }
     }
 
     res.json({
