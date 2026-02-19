@@ -15,7 +15,8 @@ function getSupabaseClient() {
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env');
+    console.error('❌ Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY/SUPABASE_ANON_KEY in environment variables');
+    throw new Error('Missing Supabase credentials. Please configure environment variables in Vercel.');
   }
 
   supabaseClient = createClient(supabaseUrl, supabaseKey, {

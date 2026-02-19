@@ -10,11 +10,15 @@ const { requestLogger, detailedLogger } = require('./middleware/requestLogger');
 
 const app = express();
 
-// Test Supabase connection on startup
-testConnection().catch(err => {
-  logger.error('Failed to connect to Supabase:', err);
-  console.error('Failed to connect to Supabase:', err.message);
-});
+// Test Supabase connection on startup (non-blocking)
+if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
+  testConnection().catch(err => {
+    logger.error('Failed to connect to Supabase:', err);
+    console.error('Failed to connect to Supabase:', err.message);
+  });
+} else {
+  console.warn('⚠️ Supabase credentials not configured. Some features may not work.');
+}
 
 // Request logging middleware (should be early in the chain)
 app.use(requestLogger);
@@ -80,12 +84,20 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.get('/api/health', async (req, res) => {
   try {
     const { getConnectionStatus } = require('./config/supabase');
+    const hasSupabaseConfig = !!(process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY));
+    
     res.status(200).json({
       status: 'OK',
       message: 'LPG Dealer Management API is running',
       database: 'Supabase',
-      connectionStatus: getConnectionStatus(),
-      timestamp: new Date().toISOString()
+      connectionStatus: hasSupabaseConfig ? getConnectionStatus() : 'not configured',
+      timestamp: new Date().toISOString(),
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasSupabaseUrl: !!process.env.SUPABASE_URL,
+        hasSupabaseKey: !!(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY),
+        hasJwtSecret: !!process.env.JWT_SECRET
+      }
     });
   } catch (error) {
     res.status(500).json({
