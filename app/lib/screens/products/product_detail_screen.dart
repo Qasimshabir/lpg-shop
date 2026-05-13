@@ -164,20 +164,39 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
-            Container(
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: _product.productType == 'cylinder'
-                    ? LPGColors.primary.withOpacity(0.1)
-                    : LPGColors.secondary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _product.productType == 'cylinder' ? Icons.propane_tank : Icons.build,
-                size: 60,
-                color: _product.productType == 'cylinder' ? LPGColors.primary : LPGColors.secondary,
-              ),
-            ),
+            // Display product image if available
+            if (_product.imageUrl != null && _product.imageUrl!.isNotEmpty)
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!, width: 2),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    _product.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildIconPlaceholder();
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              )
+            else
+              _buildIconPlaceholder(),
             SizedBox(height: 16),
             Text(
               _product.displayName,
@@ -193,6 +212,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             _buildStatusChip(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildIconPlaceholder() {
+    return Container(
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _product.productType == 'cylinder'
+            ? LPGColors.primary.withOpacity(0.1)
+            : LPGColors.secondary.withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        _product.productType == 'cylinder' ? Icons.propane_tank : Icons.build,
+        size: 60,
+        color: _product.productType == 'cylinder' ? LPGColors.primary : LPGColors.secondary,
       ),
     );
   }

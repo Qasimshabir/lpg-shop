@@ -94,8 +94,8 @@ class LPGProduct {
       barcode: json['barcode'],
       description: json['description'],
       images: json['images'] != null 
-          ? (json['images'] is List ? List<String>.from(json['images']) : [json['image_url']].where((e) => e != null).cast<String>().toList())
-          : [],
+          ? (json['images'] is List ? List<String>.from(json['images']) : [json['images']].where((e) => e != null).cast<String>().toList())
+          : (json['image_url'] != null ? [json['image_url']] : []),
       supplier: json['supplier'] != null ? Supplier.fromJson(json['supplier']) : null,
       inspectionRequired: json['inspectionRequired'] ?? json['inspection_required'] ?? false,
       inspectionInterval: json['inspectionInterval'] ?? json['inspection_interval'] ?? 60,

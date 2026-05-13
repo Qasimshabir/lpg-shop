@@ -203,20 +203,28 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: product.productType == 'cylinder'
-                          ? LPGColors.primary.withOpacity(0.1)
-                          : LPGColors.secondary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      product.productType == 'cylinder' ? Icons.propane_tank : Icons.build,
-                      color: product.productType == 'cylinder' ? LPGColors.primary : LPGColors.secondary,
-                      size: 32,
-                    ),
-                  ),
+                  // Display product image or icon
+                  if (product.imageUrl != null && product.imageUrl!.isNotEmpty)
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!, width: 1),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(7),
+                        child: Image.network(
+                          product.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildProductIcon(product);
+                          },
+                        ),
+                      ),
+                    )
+                  else
+                    _buildProductIcon(product),
                   SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -254,6 +262,25 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildProductIcon(LPGProduct product) {
+    return Container(
+      width: 60,
+      height: 60,
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: product.productType == 'cylinder'
+            ? LPGColors.primary.withOpacity(0.1)
+            : LPGColors.secondary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(
+        product.productType == 'cylinder' ? Icons.propane_tank : Icons.build,
+        color: product.productType == 'cylinder' ? LPGColors.primary : LPGColors.secondary,
+        size: 32,
       ),
     );
   }
