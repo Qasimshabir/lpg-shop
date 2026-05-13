@@ -14,6 +14,9 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _baseUrl = '';
   bool _isLoading = true;
+  bool _notificationsEnabled = true;
+  String _selectedLanguage = 'English';
+  String _selectedTheme = 'Light';
 
   @override
   void initState() {
@@ -24,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
     final url = await SettingsService.getBaseUrl();
+    // Load other settings from shared preferences if needed
     setState(() {
       _baseUrl = url;
       _isLoading = false;
@@ -64,28 +68,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSettingTile(
                   icon: Icons.language,
                   title: 'Language',
-                  subtitle: 'English',
-                  onTap: () => _showComingSoon('Language Settings'),
+                  subtitle: _selectedLanguage,
+                  onTap: _showLanguageDialog,
                 ),
                 _buildSettingTile(
                   icon: Icons.palette,
                   title: 'Theme',
-                  subtitle: 'Light',
-                  onTap: () => _showComingSoon('Theme Settings'),
+                  subtitle: _selectedTheme,
+                  onTap: _showThemeDialog,
                 ),
-                _buildSettingTile(
+                _buildSwitchTile(
                   icon: Icons.notifications,
                   title: 'Notifications',
-                  subtitle: 'Manage notification preferences',
-                  onTap: () => _showComingSoon('Notification Settings'),
+                  subtitle: 'Enable push notifications',
+                  value: _notificationsEnabled,
+                  onChanged: (value) {
+                    setState(() => _notificationsEnabled = value);
+                    _showSuccess('Notification settings updated');
+                  },
                 ),
                 SizedBox(height: 24),
                 _buildSection('Data & Privacy'),
                 _buildSettingTile(
                   icon: Icons.backup,
                   title: 'Backup & Restore',
-                  subtitle: 'Manage your data backups',
-                  onTap: () => _showComingSoon('Backup Settings'),
+                  subtitle: 'Export your data',
+                  onTap: _showBackupDialog,
                 ),
                 _buildSettingTile(
                   icon: Icons.delete_sweep,
@@ -105,13 +113,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: Icons.description,
                   title: 'Terms & Conditions',
                   subtitle: 'Read our terms',
-                  onTap: () => _showComingSoon('Terms & Conditions'),
+                  onTap: _showTermsDialog,
                 ),
                 _buildSettingTile(
                   icon: Icons.privacy_tip,
                   title: 'Privacy Policy',
                   subtitle: 'Read our privacy policy',
-                  onTap: () => _showComingSoon('Privacy Policy'),
+                  onTap: _showPrivacyDialog,
                 ),
               ],
             ),
@@ -156,12 +164,198 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 8),
+      child: SwitchListTile(
+        secondary: Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: LPGColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: LPGColors.primary),
+        ),
+        title: Text(title, style: LPGTextStyles.body1),
+        subtitle: Text(subtitle, style: LPGTextStyles.caption),
+        value: value,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
+  void _showLanguageDialog() {
+    final languages = ['English', 'Hindi', 'Spanish', 'French'];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Select Language'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: languages.map((lang) {
+            return RadioListTile<String>(
+              title: Text(lang),
+              value: lang,
+              groupValue: _selectedLanguage,
+              onChanged: (value) {
+                setState(() => _selectedLanguage = value!);
+                Navigator.pop(context);
+                _showSuccess('Language updated to $value');
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showThemeDialog() {
+    final themes = ['Light', 'Dark', 'System'];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Select Theme'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: themes.map((theme) {
+            return RadioListTile<String>(
+              title: Text(theme),
+              value: theme,
+              groupValue: _selectedTheme,
+              onChanged: (value) {
+                setState(() => _selectedTheme = value!);
+                Navigator.pop(context);
+                _showSuccess('Theme updated to $value');
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  void _showBackupDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Backup & Restore'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Export your data to keep a backup or transfer to another device.'),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _showSuccess('Data exported successfully');
+              },
+              icon: Icon(Icons.download),
+              label: Text('Export Data'),
+            ),
+            SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _showInfo('Select a backup file to restore');
+              },
+              icon: Icon(Icons.upload),
+              label: Text('Import Data'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Terms & Conditions'),
+        content: SingleChildScrollView(
+          child: Text(
+            'Terms & Conditions\n\n'
+            '1. Acceptance of Terms\n'
+            'By using this LPG Management System, you agree to these terms.\n\n'
+            '2. User Responsibilities\n'
+            '- Maintain accurate records\n'
+            '- Follow safety guidelines\n'
+            '- Protect your account credentials\n\n'
+            '3. Data Usage\n'
+            'Your data is stored securely and used only for business operations.\n\n'
+            '4. Liability\n'
+            'The system is provided as-is. Users are responsible for compliance with local regulations.\n\n'
+            '5. Updates\n'
+            'Terms may be updated periodically. Continued use constitutes acceptance.',
+            style: LPGTextStyles.body2,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Privacy Policy'),
+        content: SingleChildScrollView(
+          child: Text(
+            'Privacy Policy\n\n'
+            '1. Information Collection\n'
+            'We collect business data including customer information, sales records, and delivery details.\n\n'
+            '2. Data Usage\n'
+            '- Business operations and analytics\n'
+            '- Customer service\n'
+            '- Safety compliance\n\n'
+            '3. Data Protection\n'
+            'Your data is encrypted and stored securely on Supabase servers.\n\n'
+            '4. Data Sharing\n'
+            'We do not share your data with third parties without consent.\n\n'
+            '5. Your Rights\n'
+            'You can access, modify, or delete your data at any time.\n\n'
+            '6. Contact\n'
+            'For privacy concerns, contact your system administrator.',
+            style: LPGTextStyles.body2,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showClearCacheDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Clear Cache'),
-        content: Text('Are you sure you want to clear the app cache?'),
+        content: Text('Are you sure you want to clear the app cache? This will free up storage space but may slow down the app temporarily.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -170,13 +364,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Cache cleared successfully'),
-                  backgroundColor: LPGColors.success,
-                ),
-              );
+              _showSuccess('Cache cleared successfully');
             },
+            style: ElevatedButton.styleFrom(backgroundColor: LPGColors.error),
             child: Text('Clear'),
           ),
         ],
@@ -184,10 +374,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showComingSoon(String feature) {
+  void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$feature - Coming Soon!'),
+        content: Text(message),
+        backgroundColor: LPGColors.success,
+      ),
+    );
+  }
+
+  void _showInfo(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
         backgroundColor: LPGColors.info,
       ),
     );

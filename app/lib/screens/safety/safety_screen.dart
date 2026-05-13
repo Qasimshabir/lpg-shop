@@ -15,12 +15,13 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
   late TabController _tabController;
   bool _isLoading = true;
   List<dynamic> _incidents = [];
+  List<dynamic> _checklists = [];
   Map<String, dynamic> _complianceReport = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
@@ -36,6 +37,7 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
       
       // Load data with individual error handling
       List<dynamic> incidents = [];
+      List<dynamic> checklists = [];
       Map<String, dynamic> complianceReport = {};
       
       try {
@@ -43,6 +45,13 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
         incidents = incidentsResult['data'] ?? [];
       } catch (e) {
         print('Failed to load incidents: $e');
+      }
+      
+      try {
+        final checklistsResult = await ApiService.get('/safety/checklists');
+        checklists = checklistsResult['data'] ?? [];
+      } catch (e) {
+        print('Failed to load checklists: $e');
       }
       
       try {
@@ -54,6 +63,7 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
       
       setState(() {
         _incidents = incidents;
+        _checklists = checklists;
         _complianceReport = complianceReport;
         _isLoading = false;
       });
@@ -72,6 +82,7 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
           controller: _tabController,
           tabs: [
             Tab(text: 'Incidents', icon: Icon(Icons.warning)),
+            Tab(text: 'Checklists', icon: Icon(Icons.checklist)),
             Tab(text: 'Compliance', icon: Icon(Icons.verified_user)),
           ],
         ),
@@ -89,6 +100,7 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
               controller: _tabController,
               children: [
                 _buildIncidentsTab(),
+                _buildChecklistsTab(),
                 _buildComplianceTab(),
               ],
             ),
@@ -226,6 +238,128 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                   backgroundColor: LPGColors.success,
                 ),
               ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChecklistsTab() {
+    if (_checklists.isEmpty) {
+      return _buildEmptyState('No safety checklists', Icons.checklist);
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: ListView.builder(
+        padding: EdgeInsets.all(16),
+        itemCount: _checklists.length,
+        itemBuilder: (context, index) {
+          final checklist = _checklists[index];
+          return _buildChecklistCard(checklist);
+        },
+      ),
+    );
+  }
+
+  Widget _buildChecklistCard(Map<String, dynamic> checklist) {
+    final checkDate = checklist['check_date'] ?? checklist['checkDate'];
+    final date = checkDate != null 
+        ? DateTime.parse(checkDate) 
+        : DateTime.now();
+    final passed = checklist['passed'] ?? false;
+    final items = checklist['items'] ?? [];
+    final notes = checklist['notes'];
+
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  DateFormat('MMM dd, yyyy').format(date),
+                  style: LPGTextStyles.subtitle1,
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: passed 
+                        ? LPGColors.success.withOpacity(0.1)
+                        : LPGColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: passed ? LPGColors.success : LPGColors.error,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        passed ? Icons.check_circle : Icons.cancel,
+                        size: 16,
+                        color: passed ? LPGColors.success : LPGColors.error,
+                      ),
+                      SizedBox(width: 4),
+                      Text(
+                        passed ? 'PASSED' : 'FAILED',
+                        style: LPGTextStyles.caption.copyWith(
+                          color: passed ? LPGColors.success : LPGColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (items.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Text('Checklist Items:', style: LPGTextStyles.body2.copyWith(fontWeight: FontWeight.bold)),
+              SizedBox(height: 8),
+              ...items.take(3).map<Widget>((item) {
+                final itemChecked = item['checked'] ?? false;
+                final itemName = item['item'] ?? item['name'] ?? 'Checklist item';
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 4),
+                  child: Row(
+                    children: [
+                      Icon(
+                        itemChecked ? Icons.check_box : Icons.check_box_outline_blank,
+                        size: 18,
+                        color: itemChecked ? LPGColors.success : LPGColors.textSecondary,
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          itemName,
+                          style: LPGTextStyles.caption,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+              if (items.length > 3)
+                Padding(
+                  padding: EdgeInsets.only(top: 4),
+                  child: Text(
+                    '+ ${items.length - 3} more items',
+                    style: LPGTextStyles.caption.copyWith(
+                      color: LPGColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+            if (notes != null && notes.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text('Notes:', style: LPGTextStyles.caption.copyWith(fontWeight: FontWeight.bold)),
+              Text(notes, style: LPGTextStyles.caption),
             ],
           ],
         ),

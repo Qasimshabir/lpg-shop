@@ -104,11 +104,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 _buildPersonnelTab(),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showAddPersonnelDialog,
-        icon: Icon(Icons.add),
-        label: Text('Add Personnel'),
-      ),
+      floatingActionButton: _tabController.index == 1
+          ? FloatingActionButton.extended(
+              onPressed: _showCreateRouteDialog,
+              icon: Icon(Icons.add_road),
+              label: Text('Create Route'),
+              backgroundColor: LPGColors.primary,
+            )
+          : _tabController.index == 2
+              ? FloatingActionButton.extended(
+                  onPressed: _showAddPersonnelDialog,
+                  icon: Icon(Icons.add),
+                  label: Text('Add Personnel'),
+                )
+              : null,
     );
   }
 
@@ -473,6 +482,143 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             child: Text('Add'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showCreateRouteDialog() {
+    DateTime selectedDate = DateTime.now();
+    String? selectedPersonnelId;
+    List<String> selectedSaleIds = [];
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Create Delivery Route'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Date Picker
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.calendar_today),
+                  title: Text('Date'),
+                  subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(Duration(days: 30)),
+                    );
+                    if (date != null) {
+                      setDialogState(() => selectedDate = date);
+                    }
+                  },
+                ),
+                SizedBox(height: 16),
+                
+                // Personnel Selector
+                Text('Select Personnel', style: LPGTextStyles.subtitle2),
+                SizedBox(height: 8),
+                if (_personnel.isEmpty)
+                  Text('No personnel available', style: LPGTextStyles.caption)
+                else
+                  ..._personnel.map((person) {
+                    final users = person['users'];
+                    String userName = 'Unknown';
+                    if (users != null && users is Map) {
+                      userName = users['name'] ?? 'Unknown';
+                    }
+                    final isAvailable = person['is_available'] ?? false;
+                    
+                    return RadioListTile<String>(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(userName),
+                      subtitle: Text(
+                        '${person['vehicle_number'] ?? 'No vehicle'} - ${isAvailable ? 'Available' : 'Busy'}',
+                      ),
+                      value: person['id'],
+                      groupValue: selectedPersonnelId,
+                      onChanged: isAvailable ? (value) {
+                        setDialogState(() => selectedPersonnelId = value);
+                      } : null,
+                    );
+                  }).toList(),
+                
+                SizedBox(height: 16),
+                
+                // Pending Deliveries Selector
+                Text('Select Deliveries', style: LPGTextStyles.subtitle2),
+                SizedBox(height: 8),
+                if (_pendingDeliveries.isEmpty)
+                  Text('No pending deliveries', style: LPGTextStyles.caption)
+                else
+                  Container(
+                    constraints: BoxConstraints(maxHeight: 200),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: _pendingDeliveries.length,
+                      itemBuilder: (context, index) {
+                        final delivery = _pendingDeliveries[index];
+                        final customer = delivery['customer'] ?? delivery['lpg_customers'] ?? {};
+                        final customerName = customer['name'] ?? 'Unknown';
+                        final isSelected = selectedSaleIds.contains(delivery['id']);
+                        
+                        return CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(customerName, style: LPGTextStyles.body2),
+                          subtitle: Text(
+                            customer['address'] ?? 'No address',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          value: isSelected,
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              if (checked == true) {
+                                selectedSaleIds.add(delivery['id']);
+                              } else {
+                                selectedSaleIds.remove(delivery['id']);
+                              }
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedPersonnelId == null || selectedSaleIds.isEmpty
+                  ? null
+                  : () async {
+                      try {
+                        await ApiService.post('/delivery/assign', {
+                          'date': selectedDate.toIso8601String().split('T')[0],
+                          'personnel_id': selectedPersonnelId,
+                          'sale_ids': selectedSaleIds,
+                        });
+                        Navigator.pop(context);
+                        _showSuccess('Route created successfully');
+                        _loadData();
+                      } catch (e) {
+                        _showError('Failed to create route: $e');
+                      }
+                    },
+              child: Text('Create Route'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   getChecklistForSale,
+  getChecklists,
   createChecklist,
   checkItem,
   addAcknowledgment,
@@ -15,7 +16,9 @@ const {
 router.use(protect);
 
 // Checklist routes
-router.post('/checklists', createChecklist);
+router.route('/checklists')
+  .get(getChecklists)
+  .post(createChecklist);
 router.get('/checklists/sale/:saleId', getChecklistForSale);
 router.put('/checklists/:id/items/:itemId', checkItem);
 router.post('/checklists/:id/acknowledge', addAcknowledgment);

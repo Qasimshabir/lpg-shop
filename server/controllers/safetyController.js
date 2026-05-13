@@ -24,6 +24,36 @@ const getChecklistForSale = async (req, res, next) => {
   }
 };
 
+// @desc    Get all checklists
+// @route   GET /api/safety/checklists
+// @access  Private
+const getChecklists = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    let query = supabase
+      .from('safety_checklists')
+      .select('*, users(name)')
+      .order('check_date', { ascending: false });
+
+    if (req.query.passed !== undefined) {
+      query = query.eq('passed', req.query.passed === 'true');
+    }
+
+    const { data: checklists, error } = await query;
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      count: checklists?.length || 0,
+      data: checklists || []
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create safety checklist
 // @route   POST /api/safety/checklists
 // @access  Private
@@ -318,6 +348,7 @@ const getComplianceReport = async (req, res, next) => {
 
 module.exports = {
   getChecklistForSale,
+  getChecklists,
   createChecklist,
   checkItem,
   addAcknowledgment,
