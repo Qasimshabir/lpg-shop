@@ -22,6 +22,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to update FAB when tab changes
+    });
     _loadData();
   }
 
@@ -104,20 +107,34 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 _buildPersonnelTab(),
               ],
             ),
-      floatingActionButton: _tabController.index == 1
+      floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
-              onPressed: _showCreateRouteDialog,
-              icon: Icon(Icons.add_road),
-              label: Text('Create Route'),
-              backgroundColor: LPGColors.primary,
+              onPressed: () {
+                // Quick assign - show personnel selector for pending deliveries
+                if (_pendingDeliveries.isEmpty) {
+                  _showError('No pending deliveries to assign');
+                  return;
+                }
+                _showCreateRouteDialog();
+              },
+              icon: Icon(Icons.assignment),
+              label: Text('Assign Deliveries'),
+              backgroundColor: LPGColors.warning,
             )
-          : _tabController.index == 2
+          : _tabController.index == 1
               ? FloatingActionButton.extended(
-                  onPressed: _showAddPersonnelDialog,
-                  icon: Icon(Icons.add),
-                  label: Text('Add Personnel'),
+                  onPressed: _showCreateRouteDialog,
+                  icon: Icon(Icons.add_road),
+                  label: Text('Create Route'),
+                  backgroundColor: LPGColors.primary,
                 )
-              : null,
+              : _tabController.index == 2
+                  ? FloatingActionButton.extended(
+                      onPressed: _showAddPersonnelDialog,
+                      icon: Icon(Icons.add),
+                      label: Text('Add Personnel'),
+                    )
+                  : null,
     );
   }
 
@@ -277,6 +294,17 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 ),
               ),
             ],
+            if (status == 'in_progress') ...[
+              SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => _completeRoute(route['id']),
+                icon: Icon(Icons.check_circle),
+                label: Text('Complete Route'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: LPGColors.primary,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -389,10 +417,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                 userName = users[0]['name'] ?? 'Unknown';
               }
               
+              final isAvailable = person['is_available'] ?? false;
+              
               return ListTile(
                 title: Text(userName),
-                subtitle: Text(person['vehicle_number'] ?? 'No vehicle'),
-                onTap: () => Navigator.pop(context, person),
+                subtitle: Text(
+                  '${person['vehicle_number'] ?? 'No vehicle'} - ${isAvailable ? 'Available' : 'Busy'}',
+                ),
+                enabled: isAvailable,
+                onTap: isAvailable ? () => Navigator.pop(context, person) : null,
               );
             },
           ),
@@ -403,10 +436,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     if (selectedPersonnel != null) {
       try {
         await ApiService.post('/delivery/assign', {
+          'date': DateTime.now().toIso8601String().split('T')[0],
           'sale_ids': [deliveryId],
           'personnel_id': selectedPersonnel['id'],
         });
-        _showSuccess('Delivery assigned successfully');
+        _showSuccess('Delivery assigned successfully. Status updated to "assigned".');
         _loadData();
       } catch (e) {
         _showError('Failed to assign delivery: $e');
@@ -421,6 +455,38 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
       _loadData();
     } catch (e) {
       _showError('Failed to start route: $e');
+    }
+  }
+
+  Future<void> _completeRoute(String routeId) async {
+    // Confirm before completing
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Complete Route'),
+        content: Text('Are you sure you want to mark this route as completed? The assigned personnel will be marked as available.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: LPGColors.success),
+            child: Text('Complete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ApiService.put('/delivery/routes/$routeId/complete', {});
+        _showSuccess('Route completed. Personnel is now available.');
+        _loadData();
+      } catch (e) {
+        _showError('Failed to complete route: $e');
+      }
     }
   }
 

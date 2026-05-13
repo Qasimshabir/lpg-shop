@@ -22,6 +22,9 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      setState(() {}); // Rebuild to update FAB when tab changes
+    });
     _loadData();
   }
 
@@ -104,12 +107,28 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                 _buildComplianceTab(),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _showReportIncidentDialog,
-        icon: Icon(Icons.report),
-        label: Text('Report Incident'),
-        backgroundColor: LPGColors.error,
-      ),
+      floatingActionButton: _tabController.index == 0
+          ? FloatingActionButton.extended(
+              onPressed: _showReportIncidentDialog,
+              icon: Icon(Icons.report),
+              label: Text('Report Incident'),
+              backgroundColor: LPGColors.error,
+            )
+          : _tabController.index == 1
+              ? FloatingActionButton.extended(
+                  onPressed: _showCreateChecklistDialog,
+                  icon: Icon(Icons.add_task),
+                  label: Text('Create Checklist'),
+                  backgroundColor: LPGColors.primary,
+                )
+              : _tabController.index == 2
+                  ? FloatingActionButton.extended(
+                      onPressed: _showReportIncidentDialog,
+                      icon: Icon(Icons.report),
+                      label: Text('Report Incident'),
+                      backgroundColor: LPGColors.error,
+                    )
+                  : null,
     );
   }
 
@@ -368,12 +387,19 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
   }
 
   Widget _buildComplianceTab() {
-    final totalChecklists = _complianceReport['totalChecklists'] ?? 
-                           _complianceReport['total_checklists'] ?? 0;
-    final passedChecklists = _complianceReport['passedChecklists'] ?? 
-                            _complianceReport['passed_checklists'] ?? 0;
-    final failedChecklists = _complianceReport['failedChecklists'] ?? 
-                            _complianceReport['failed_checklists'] ?? 0;
+    // Backend returns: { checklists: { total, passed, failed }, incidents: { ... } }
+    final checklists = _complianceReport['checklists'] ?? {};
+    final incidents = _complianceReport['incidents'] ?? {};
+    
+    final totalChecklists = checklists['total'] ?? 0;
+    final passedChecklists = checklists['passed'] ?? 0;
+    final failedChecklists = checklists['failed'] ?? 0;
+    
+    final totalIncidents = incidents['total'] ?? 0;
+    final openIncidents = incidents['open'] ?? 0;
+    final resolvedIncidents = incidents['resolved'] ?? 0;
+    final bySeverity = incidents['bySeverity'] ?? {};
+    
     final complianceRate = totalChecklists > 0 
         ? (passedChecklists / totalChecklists * 100).toStringAsFixed(1)
         : '0.0';
@@ -398,7 +424,13 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: LPGColors.success,
+                          color: totalChecklists > 0 
+                              ? (double.parse(complianceRate) >= 80 
+                                  ? LPGColors.success 
+                                  : double.parse(complianceRate) >= 60
+                                      ? LPGColors.warning
+                                      : LPGColors.error)
+                              : LPGColors.textTertiary,
                           width: 10,
                         ),
                       ),
@@ -409,7 +441,13 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                             Text(
                               '$complianceRate%',
                               style: LPGTextStyles.heading1.copyWith(
-                                color: LPGColors.success,
+                                color: totalChecklists > 0 
+                                    ? (double.parse(complianceRate) >= 80 
+                                        ? LPGColors.success 
+                                        : double.parse(complianceRate) >= 60
+                                            ? LPGColors.warning
+                                            : LPGColors.error)
+                                    : LPGColors.textTertiary,
                                 fontSize: 36,
                               ),
                             ),
@@ -446,6 +484,43 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text('Safety Incidents', style: LPGTextStyles.subtitle1),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatBox('Total', totalIncidents, LPGColors.primary),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatBox('Open', openIncidents, LPGColors.warning),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatBox('Resolved', resolvedIncidents, LPGColors.success),
+                      ),
+                    ],
+                  ),
+                  if (totalIncidents > 0) ...[
+                    SizedBox(height: 16),
+                    Text('By Severity', style: LPGTextStyles.body2.copyWith(fontWeight: FontWeight.bold)),
+                    SizedBox(height: 8),
+                    _buildSeverityRow('Critical', bySeverity['critical'] ?? 0, LPGColors.error),
+                    _buildSeverityRow('High', bySeverity['high'] ?? 0, Colors.orange),
+                    _buildSeverityRow('Medium', bySeverity['medium'] ?? 0, LPGColors.warning),
+                    _buildSeverityRow('Low', bySeverity['low'] ?? 0, LPGColors.info),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text('Safety Guidelines', style: LPGTextStyles.subtitle1),
                   SizedBox(height: 12),
                   _buildGuidelineItem('Always check cylinder condition before delivery'),
@@ -455,6 +530,33 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                   _buildGuidelineItem('Maintain safety equipment inventory'),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeverityRow(String label, int count, Color color) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          SizedBox(width: 8),
+          Expanded(child: Text(label, style: LPGTextStyles.body2)),
+          Text(
+            count.toString(),
+            style: LPGTextStyles.body2.copyWith(
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -559,6 +661,10 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
             ),
             ElevatedButton(
               onPressed: () async {
+                if (descriptionController.text.isEmpty) {
+                  _showError('Please enter a description');
+                  return;
+                }
                 try {
                   await ApiService.post('/safety/incidents', {
                     'description': descriptionController.text,
@@ -575,6 +681,136 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
               },
               style: ElevatedButton.styleFrom(backgroundColor: LPGColors.error),
               child: Text('Report'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCreateChecklistDialog() async {
+    // Load recent sales for linking
+    List<dynamic> recentSales = [];
+    try {
+      final salesResult = await ApiService.get('/sales?limit=20');
+      recentSales = salesResult['data'] ?? [];
+    } catch (e) {
+      print('Failed to load sales: $e');
+    }
+
+    if (!mounted) return;
+
+    String? selectedSaleId;
+    List<Map<String, dynamic>> checklistItems = [
+      {'item': 'Cylinder exterior inspected for damage', 'checked': false},
+      {'item': 'Valve checked for leaks', 'checked': false},
+      {'item': 'Regulator connection inspected', 'checked': false},
+      {'item': 'No visible corrosion or dents', 'checked': false},
+      {'item': 'Safety instructions provided', 'checked': false},
+      {'item': 'Emergency procedures explained', 'checked': false},
+    ];
+    final notesController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Create Safety Checklist'),
+          content: SingleChildScrollView(
+            child: Container(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (recentSales.isNotEmpty) ...[
+                    Text('Link to Sale (Optional)', style: LPGTextStyles.subtitle2),
+                    SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: selectedSaleId,
+                      decoration: InputDecoration(
+                        labelText: 'Select Sale',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(value: null, child: Text('No sale selected')),
+                        ...recentSales.map((sale) {
+                          final customer = sale['customer'] ?? sale['lpg_customers'] ?? {};
+                          final customerName = customer['name'] ?? 'Unknown';
+                          final invoiceNumber = sale['invoice_number'] ?? 'N/A';
+                          return DropdownMenuItem(
+                            value: sale['id'],
+                            child: Text('$invoiceNumber - $customerName'),
+                          );
+                        }).toList(),
+                      ],
+                      onChanged: (value) {
+                        setDialogState(() => selectedSaleId = value);
+                      },
+                    ),
+                    SizedBox(height: 16),
+                  ],
+                  Text('Checklist Items', style: LPGTextStyles.subtitle2),
+                  SizedBox(height: 8),
+                  Container(
+                    constraints: BoxConstraints(maxHeight: 250),
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: checklistItems.length,
+                      itemBuilder: (context, index) {
+                        return CheckboxListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(
+                            checklistItems[index]['item'],
+                            style: LPGTextStyles.body2,
+                          ),
+                          value: checklistItems[index]['checked'],
+                          onChanged: (checked) {
+                            setDialogState(() {
+                              checklistItems[index]['checked'] = checked ?? false;
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes (Optional)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final allChecked = checklistItems.every((item) => item['checked'] == true);
+                
+                try {
+                  await ApiService.post('/safety/checklists', {
+                    'sale_id': selectedSaleId,
+                    'items': checklistItems,
+                    'passed': allChecked,
+                    'notes': notesController.text.isEmpty ? null : notesController.text,
+                  });
+                  Navigator.pop(context);
+                  _showSuccess('Safety checklist created successfully');
+                  _loadData();
+                } catch (e) {
+                  _showError('Failed to create checklist: $e');
+                }
+              },
+              child: Text('Create'),
             ),
           ],
         ),

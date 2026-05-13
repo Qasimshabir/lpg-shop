@@ -126,7 +126,7 @@ const assignDeliveries = async (req, res, next) => {
 
     if (error) throw error;
 
-    // Update sales with delivery route
+    // Update sales with delivery status
     if (req.body.sale_ids && req.body.sale_ids.length > 0) {
       const { error: updateError } = await supabase
         .from('lpg_sales')
@@ -134,6 +134,16 @@ const assignDeliveries = async (req, res, next) => {
         .in('id', req.body.sale_ids);
 
       if (updateError) throw updateError;
+    }
+
+    // Update personnel availability to busy
+    if (req.body.personnel_id) {
+      const { error: personnelError } = await supabase
+        .from('delivery_personnel')
+        .update({ is_available: false })
+        .eq('id', req.body.personnel_id);
+
+      if (personnelError) throw personnelError;
     }
 
     res.status(201).json({
@@ -224,14 +234,14 @@ const completeDeliveryRoute = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
-    const { data: route, error } = await supabase
+    // Get route to find personnel_id
+    const { data: route, error: fetchError } = await supabase
       .from('delivery_routes')
-      .update({ status: 'completed' })
+      .select('personnel_id')
       .eq('id', req.params.id)
-      .select()
       .single();
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
 
     if (!route) {
       return res.status(404).json({
@@ -240,10 +250,30 @@ const completeDeliveryRoute = async (req, res, next) => {
       });
     }
 
+    // Update route status
+    const { data: updatedRoute, error } = await supabase
+      .from('delivery_routes')
+      .update({ status: 'completed' })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Mark personnel as available again
+    if (route.personnel_id) {
+      const { error: personnelError } = await supabase
+        .from('delivery_personnel')
+        .update({ is_available: true })
+        .eq('id', route.personnel_id);
+
+      if (personnelError) throw personnelError;
+    }
+
     res.json({
       success: true,
-      message: 'Delivery route completed successfully',
-      data: route
+      message: 'Delivery route completed successfully. Personnel marked as available.',
+      data: updatedRoute
     });
   } catch (error) {
     next(error);
