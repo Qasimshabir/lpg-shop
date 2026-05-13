@@ -208,6 +208,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
         'isActive': true,
       };
 
+      // Add image if selected
+      if (_imageBase64 != null) {
+        productData['image'] = _imageBase64;
+      }
+
       if (_productType == 'cylinder') {
         productData['cylinderType'] = _cylinderType!;
         productData['capacity'] = _capacity!;
@@ -263,6 +268,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
         child: ListView(
           padding: EdgeInsets.all(16),
           children: [
+            _buildImageSection(),
+            SizedBox(height: 24),
             _buildProductTypeSelector(),
             SizedBox(height: 24),
             _buildBasicInfoSection(),
@@ -287,6 +294,97 @@ class _AddProductScreenState extends State<AddProductScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildImageSection() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Product Image', style: LPGTextStyles.subtitle1),
+            SizedBox(height: 16),
+            Center(
+              child: GestureDetector(
+                onTap: _showImageSourceDialog,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[400]!, width: 2),
+                  ),
+                  child: _selectedImage != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            _selectedImage!,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : (isEditMode && widget.product!.imageUrl != null)
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                widget.product!.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _buildImagePlaceholder(),
+                              ),
+                            )
+                          : _buildImagePlaceholder(),
+                ),
+              ),
+            ),
+            SizedBox(height: 12),
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: _showImageSourceDialog,
+                icon: Icon(_selectedImage != null || (isEditMode && widget.product!.imageUrl != null)
+                    ? Icons.edit
+                    : Icons.add_photo_alternate),
+                label: Text(_selectedImage != null || (isEditMode && widget.product!.imageUrl != null)
+                    ? 'Change Image'
+                    : 'Add Image'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: LPGColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            if (_selectedImage != null || (isEditMode && widget.product!.imageUrl != null))
+              Center(
+                child: TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _selectedImage = null;
+                      _imageBase64 = null;
+                    });
+                  },
+                  icon: Icon(Icons.delete, color: Colors.red),
+                  label: Text('Remove Image', style: TextStyle(color: Colors.red)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePlaceholder() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.propane_tank, size: 80, color: Colors.grey[400]),
+        SizedBox(height: 8),
+        Text(
+          'Tap to add image',
+          style: TextStyle(color: Colors.grey[600]),
+        ),
+      ],
     );
   }
 

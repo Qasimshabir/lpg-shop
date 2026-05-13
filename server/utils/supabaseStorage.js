@@ -1,7 +1,17 @@
 const { supabase } = require('../config/supabase');
 const logger = require('../config/logger');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
+
+// Try to use uuid package, fallback to crypto
+let uuidv4;
+try {
+  const { v4 } = require('uuid');
+  uuidv4 = v4;
+} catch (error) {
+  // Fallback to crypto.randomUUID (Node 14.17.0+)
+  uuidv4 = () => crypto.randomUUID();
+}
 
 /**
  * Upload image to Supabase Storage
