@@ -205,6 +205,11 @@ class LPGProduct {
     return name;
   }
 
+  // Get the first image URL or null
+  String? get imageUrl {
+    return images.isNotEmpty ? images.first : null;
+  }
+
   LPGProduct copyWith({
     String? name,
     String? brand,

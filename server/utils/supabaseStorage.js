@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabase');
+const { getSupabaseClient } = require('../config/supabase');
 const logger = require('../config/logger');
 const path = require('path');
 const crypto = require('crypto');
@@ -22,6 +22,8 @@ try {
  */
 async function uploadImage(fileBuffer, fileName, bucket = 'product-images') {
   try {
+    const supabase = getSupabaseClient();
+    
     // Generate unique file name
     const fileExt = path.extname(fileName);
     const uniqueFileName = `${uuidv4()}${fileExt}`;
@@ -65,6 +67,8 @@ async function uploadImage(fileBuffer, fileName, bucket = 'product-images') {
  */
 async function deleteImage(filePath, bucket = 'product-images') {
   try {
+    const supabase = getSupabaseClient();
+    
     const { error } = await supabase.storage
       .from(bucket)
       .remove([filePath]);

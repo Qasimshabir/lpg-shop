@@ -1,7 +1,9 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import '../../services/lpg_api_service.dart';
 import '../../models/lpg_product.dart';
 import '../../lpg_theme.dart';
@@ -20,7 +22,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   final ImagePicker _imagePicker = ImagePicker();
-  File? _selectedImage;
+  XFile? _selectedImageFile;
+  Uint8List? _webImageBytes;
   String? _imageBase64;
 
   // Form controllers
@@ -89,16 +92,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
       );
 
       if (pickedFile != null) {
-        final File imageFile = File(pickedFile.path);
-        final bytes = await imageFile.readAsBytes();
+        final bytes = await pickedFile.readAsBytes();
         final base64Image = base64Encode(bytes);
         
         // Get file extension
-        final extension = pickedFile.path.split('.').last.toLowerCase();
+        final extension = pickedFile.name.split('.').last.toLowerCase();
         final mimeType = extension == 'png' ? 'png' : 'jpeg';
         
         setState(() {
-          _selectedImage = imageFile;
+          _selectedImageFile = pickedFile;
+          if (kIsWeb) {
+            _webImageBytes = bytes;
+          }
           _imageBase64 = 'data:image/$mimeType;base64,$base64Image';
         });
       }
@@ -115,6 +120,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
   }
 
   void _showImageSourceDialog() {
+    // On web, camera is not available, so directly pick from gallery
+    if (kIsWeb) {
+      _pickImage(ImageSource.gallery);
+      return;
+    }
+    
+    // On mobile, show options for camera or gallery
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -136,14 +148,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 _pickImage(ImageSource.gallery);
               },
             ),
-            if (_selectedImage != null || (isEditMode && widget.product!.imageUrl != null))
+            if (_selectedImageFile != null || (isEditMode && widget.product!.imageUrl != null))
               ListTile(
                 leading: const Icon(Icons.delete, color: Colors.red),
                 title: const Text('Remove Image', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.pop(context);
                   setState(() {
-                    _selectedImage = null;
+                    _selectedImageFile = null;
+                    _webImageBytes = null;
                     _imageBase64 = null;
                   });
                 },
@@ -210,7 +223,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       // Add image if selected
       if (_imageBase64 != null) {
-        productData['image'] = _imageBase64;
+        productData['image'] = _imageBase64!;
       }
 
       if (_productType == 'cylinder') {
@@ -317,25 +330,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[400]!, width: 2),
                   ),
-                  child: _selectedImage != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: Image.file(
-                            _selectedImage!,
-                            fit: BoxFit.cover,
-                          ),
-                        )
-                      : (isEditMode && widget.product!.imageUrl != null)
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                widget.product!.imageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    _buildImagePlaceholder(),
-                              ),
-                            )
-                          : _buildImagePlaceholder(),
+                  child: _buildImagePreview(),
                 ),
               ),
             ),
@@ -343,10 +338,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
             Center(
               child: ElevatedButton.icon(
                 onPressed: _showImageSourceDialog,
-                icon: Icon(_selectedImage != null || (isEditMode && widget.product!.imageUrl != null)
+                icon: Icon(_selectedImageFile != null || (isEditMode && widget.product!.imageUrl != null)
                     ? Icons.edit
                     : Icons.add_photo_alternate),
-                label: Text(_selectedImage != null || (isEditMode && widget.product!.imageUrl != null)
+                label: Text(_selectedImageFile != null || (isEditMode && widget.product!.imageUrl != null)
                     ? 'Change Image'
                     : 'Add Image'),
                 style: ElevatedButton.styleFrom(
@@ -355,12 +350,13 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
               ),
             ),
-            if (_selectedImage != null || (isEditMode && widget.product!.imageUrl != null))
+            if (_selectedImageFile != null || (isEditMode && widget.product!.imageUrl != null))
               Center(
                 child: TextButton.icon(
                   onPressed: () {
                     setState(() {
-                      _selectedImage = null;
+                      _selectedImageFile = null;
+                      _webImageBytes = null;
                       _imageBase64 = null;
                     });
                   },
@@ -372,6 +368,46 @@ class _AddProductScreenState extends State<AddProductScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildImagePreview() {
+    // Show selected image
+    if (_selectedImageFile != null) {
+      if (kIsWeb && _webImageBytes != null) {
+        // Web: Use memory image
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.memory(
+            _webImageBytes!,
+            fit: BoxFit.cover,
+          ),
+        );
+      } else if (!kIsWeb) {
+        // Mobile: Use file image
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.file(
+            File(_selectedImageFile!.path),
+            fit: BoxFit.cover,
+          ),
+        );
+      }
+    }
+    
+    // Show existing image in edit mode
+    if (isEditMode && widget.product!.imageUrl != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          widget.product!.imageUrl!,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildImagePlaceholder(),
+        ),
+      );
+    }
+    
+    // Show placeholder
+    return _buildImagePlaceholder();
   }
 
   Widget _buildImagePlaceholder() {

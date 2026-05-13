@@ -1,4 +1,4 @@
-const { supabase } = require('../config/supabase');
+const { getSupabaseClient } = require('../config/supabase');
 const logger = require('../config/logger');
 
 /**
@@ -6,6 +6,7 @@ const logger = require('../config/logger');
  */
 exports.getCustomerPurchaseHistory = async (req, res) => {
   try {
+    const supabase = getSupabaseClient();
     const { customerId } = req.params;
     const { limit = 50, offset = 0, startDate, endDate } = req.query;
 

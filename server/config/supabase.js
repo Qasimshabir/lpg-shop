@@ -19,6 +19,11 @@ function getSupabaseClient() {
     throw new Error('Missing Supabase credentials. Please configure environment variables in Vercel.');
   }
 
+  // Warn if using anon key instead of service key
+  if (!process.env.SUPABASE_SERVICE_KEY && process.env.SUPABASE_ANON_KEY) {
+    console.warn('⚠️  WARNING: Using SUPABASE_ANON_KEY. For storage operations, SUPABASE_SERVICE_KEY is recommended.');
+  }
+
   supabaseClient = createClient(supabaseUrl, supabaseKey, {
     auth: {
       autoRefreshToken: true,
