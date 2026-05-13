@@ -560,130 +560,194 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text('Create Delivery Route'),
-          content: SingleChildScrollView(
+        builder: (context, setDialogState) => Dialog(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.9,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.8,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Date Picker
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(Icons.calendar_today),
-                  title: Text('Date'),
-                  subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
-                  onTap: () async {
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(Duration(days: 30)),
-                    );
-                    if (date != null) {
-                      setDialogState(() => selectedDate = date);
-                    }
-                  },
+                // Title
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_road, color: LPGColors.primary),
+                      SizedBox(width: 8),
+                      Text('Create Delivery Route', style: LPGTextStyles.heading3),
+                    ],
+                  ),
                 ),
-                SizedBox(height: 16),
+                Divider(height: 1),
                 
-                // Personnel Selector
-                Text('Select Personnel', style: LPGTextStyles.subtitle2),
-                SizedBox(height: 8),
-                if (_personnel.isEmpty)
-                  Text('No personnel available', style: LPGTextStyles.caption)
-                else
-                  ..._personnel.map((person) {
-                    final users = person['users'];
-                    String userName = 'Unknown';
-                    if (users != null && users is Map) {
-                      userName = users['name'] ?? 'Unknown';
-                    }
-                    final isAvailable = person['is_available'] ?? false;
-                    
-                    return RadioListTile<String>(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(userName),
-                      subtitle: Text(
-                        '${person['vehicle_number'] ?? 'No vehicle'} - ${isAvailable ? 'Available' : 'Busy'}',
-                      ),
-                      value: person['id'],
-                      groupValue: selectedPersonnelId,
-                      onChanged: isAvailable ? (value) {
-                        setDialogState(() => selectedPersonnelId = value);
-                      } : null,
-                    );
-                  }).toList(),
-                
-                SizedBox(height: 16),
-                
-                // Pending Deliveries Selector
-                Text('Select Deliveries', style: LPGTextStyles.subtitle2),
-                SizedBox(height: 8),
-                if (_pendingDeliveries.isEmpty)
-                  Text('No pending deliveries', style: LPGTextStyles.caption)
-                else
-                  Container(
-                    constraints: BoxConstraints(maxHeight: 200),
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _pendingDeliveries.length,
-                      itemBuilder: (context, index) {
-                        final delivery = _pendingDeliveries[index];
-                        final customer = delivery['customer'] ?? delivery['lpg_customers'] ?? {};
-                        final customerName = customer['name'] ?? 'Unknown';
-                        final isSelected = selectedSaleIds.contains(delivery['id']);
-                        
-                        return CheckboxListTile(
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Date Picker
+                        ListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(customerName, style: LPGTextStyles.body2),
-                          subtitle: Text(
-                            customer['address'] ?? 'No address',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          value: isSelected,
-                          onChanged: (checked) {
-                            setDialogState(() {
-                              if (checked == true) {
-                                selectedSaleIds.add(delivery['id']);
-                              } else {
-                                selectedSaleIds.remove(delivery['id']);
-                              }
-                            });
+                          leading: Icon(Icons.calendar_today, color: LPGColors.primary),
+                          title: Text('Delivery Date'),
+                          subtitle: Text(DateFormat('MMM dd, yyyy').format(selectedDate)),
+                          trailing: Icon(Icons.edit),
+                          onTap: () async {
+                            final date = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(Duration(days: 30)),
+                            );
+                            if (date != null) {
+                              setDialogState(() => selectedDate = date);
+                            }
                           },
-                        );
-                      },
+                        ),
+                        SizedBox(height: 16),
+                        
+                        // Personnel Selector
+                        Text('Select Personnel', style: LPGTextStyles.subtitle1),
+                        SizedBox(height: 8),
+                        if (_personnel.isEmpty)
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(
+                              child: Text('No personnel available', style: LPGTextStyles.body2),
+                            ),
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              children: _personnel.map((person) {
+                                final users = person['users'];
+                                String userName = 'Unknown';
+                                if (users != null && users is Map) {
+                                  userName = users['name'] ?? 'Unknown';
+                                }
+                                final isAvailable = person['is_available'] ?? false;
+                                
+                                return RadioListTile<String>(
+                                  title: Text(userName),
+                                  subtitle: Text(
+                                    '${person['vehicle_number'] ?? 'No vehicle'} - ${isAvailable ? 'Available' : 'Busy'}',
+                                    style: TextStyle(
+                                      color: isAvailable ? LPGColors.success : LPGColors.error,
+                                    ),
+                                  ),
+                                  value: person['id'],
+                                  groupValue: selectedPersonnelId,
+                                  onChanged: isAvailable ? (value) {
+                                    setDialogState(() => selectedPersonnelId = value);
+                                  } : null,
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        
+                        SizedBox(height: 16),
+                        
+                        // Pending Deliveries Selector
+                        Text('Select Deliveries', style: LPGTextStyles.subtitle1),
+                        SizedBox(height: 8),
+                        if (_pendingDeliveries.isEmpty)
+                          Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Center(
+                              child: Text('No pending deliveries', style: LPGTextStyles.body2),
+                            ),
+                          )
+                        else
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: BoxConstraints(maxHeight: 250),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: _pendingDeliveries.length,
+                              itemBuilder: (context, index) {
+                                final delivery = _pendingDeliveries[index];
+                                final customer = delivery['customer'] ?? delivery['lpg_customers'] ?? {};
+                                final customerName = customer['name'] ?? 'Unknown';
+                                final isSelected = selectedSaleIds.contains(delivery['id']);
+                                
+                                return CheckboxListTile(
+                                  title: Text(customerName, style: LPGTextStyles.body2),
+                                  subtitle: Text(
+                                    customer['address'] ?? 'No address',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  value: isSelected,
+                                  onChanged: (checked) {
+                                    setDialogState(() {
+                                      if (checked == true) {
+                                        selectedSaleIds.add(delivery['id']);
+                                      } else {
+                                        selectedSaleIds.remove(delivery['id']);
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                ),
+                
+                // Actions
+                Divider(height: 1),
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Cancel'),
+                      ),
+                      SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        onPressed: selectedPersonnelId == null || selectedSaleIds.isEmpty
+                            ? null
+                            : () async {
+                                try {
+                                  await ApiService.post('/delivery/assign', {
+                                    'date': selectedDate.toIso8601String().split('T')[0],
+                                    'personnel_id': selectedPersonnelId,
+                                    'sale_ids': selectedSaleIds,
+                                  });
+                                  Navigator.pop(context);
+                                  _showSuccess('Route created successfully');
+                                  _loadData();
+                                } catch (e) {
+                                  _showError('Failed to create route: $e');
+                                }
+                              },
+                        icon: Icon(Icons.check),
+                        label: Text('Create Route'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: LPGColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: selectedPersonnelId == null || selectedSaleIds.isEmpty
-                  ? null
-                  : () async {
-                      try {
-                        await ApiService.post('/delivery/assign', {
-                          'date': selectedDate.toIso8601String().split('T')[0],
-                          'personnel_id': selectedPersonnelId,
-                          'sale_ids': selectedSaleIds,
-                        });
-                        Navigator.pop(context);
-                        _showSuccess('Route created successfully');
-                        _loadData();
-                      } catch (e) {
-                        _showError('Failed to create route: $e');
-                      }
-                    },
-              child: Text('Create Route'),
-            ),
-          ],
         ),
       ),
     );

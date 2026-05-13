@@ -26,10 +26,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     setState(() => _isLoading = true);
-    final url = await SettingsService.getBaseUrl();
-    // Load other settings from shared preferences if needed
+    final url = SettingsService.getBaseUrl();
+    final language = SettingsService.getLanguage();
+    final theme = SettingsService.getTheme();
+    final notifications = SettingsService.getNotificationsEnabled();
+    
     setState(() {
       _baseUrl = url;
+      _selectedLanguage = language;
+      _selectedTheme = theme;
+      _notificationsEnabled = notifications;
       _isLoading = false;
     });
   }
@@ -82,8 +88,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   title: 'Notifications',
                   subtitle: 'Enable push notifications',
                   value: _notificationsEnabled,
-                  onChanged: (value) {
+                  onChanged: (value) async {
                     setState(() => _notificationsEnabled = value);
+                    await SettingsService.setNotificationsEnabled(value);
                     _showSuccess('Notification settings updated');
                   },
                 ),
@@ -204,8 +211,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text(lang),
               value: lang,
               groupValue: _selectedLanguage,
-              onChanged: (value) {
+              onChanged: (value) async {
                 setState(() => _selectedLanguage = value!);
+                await SettingsService.setLanguage(value!);
                 Navigator.pop(context);
                 _showSuccess('Language updated to $value');
               },
@@ -230,10 +238,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text(theme),
               value: theme,
               groupValue: _selectedTheme,
-              onChanged: (value) {
+              onChanged: (value) async {
                 setState(() => _selectedTheme = value!);
+                await SettingsService.setTheme(value!);
                 Navigator.pop(context);
-                _showSuccess('Theme updated to $value');
+                _showSuccess('Theme updated to $value. Restart app to apply changes.');
               },
             );
           }).toList(),
@@ -251,24 +260,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Export your data to keep a backup or transfer to another device.'),
+            Text('Export your settings to keep a backup or transfer to another device.'),
             SizedBox(height: 16),
             ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                _showSuccess('Data exported successfully');
+              onPressed: () async {
+                try {
+                  final settingsJson = await SettingsService.exportSettings();
+                  Navigator.pop(context);
+                  
+                  // Show the exported data in a dialog
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Settings Exported'),
+                      content: SingleChildScrollView(
+                        child: SelectableText(
+                          settingsJson,
+                          style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text('Close'),
+                        ),
+                      ],
+                    ),
+                  );
+                  
+                  _showSuccess('Settings exported successfully. Copy the text to save it.');
+                } catch (e) {
+                  _showError('Failed to export settings: $e');
+                }
               },
               icon: Icon(Icons.download),
-              label: Text('Export Data'),
+              label: Text('Export Settings'),
             ),
             SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                _showInfo('Select a backup file to restore');
+                _showImportDialog();
               },
               icon: Icon(Icons.upload),
-              label: Text('Import Data'),
+              label: Text('Import Settings'),
             ),
           ],
         ),
@@ -276,6 +311,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImportDialog() {
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Import Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Paste the exported settings JSON below:'),
+            SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Paste JSON here',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 5,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                final success = await SettingsService.importSettings(controller.text);
+                Navigator.pop(context);
+                
+                if (success) {
+                  _showSuccess('Settings imported successfully');
+                  _loadSettings();
+                } else {
+                  _showError('Failed to import settings');
+                }
+              } catch (e) {
+                Navigator.pop(context);
+                _showError('Invalid settings data: $e');
+              }
+            },
+            child: Text('Import'),
           ),
         ],
       ),
@@ -350,26 +436,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showClearCacheDialog() {
+  void _showClearCacheDialog() async {
+    // Get cache size first
+    final cacheSize = await SettingsService.getCacheSize();
+    final cacheSizeMB = (cacheSize / (1024 * 1024)).toStringAsFixed(2);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Clear Cache'),
-        content: Text('Are you sure you want to clear the app cache? This will free up storage space but may slow down the app temporarily.'),
+        content: Text(
+          'Current cache size: $cacheSizeMB MB\n\n'
+          'Are you sure you want to clear the app cache? This will free up storage space but may slow down the app temporarily.'
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _showSuccess('Cache cleared successfully');
+              
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) => Center(child: CircularProgressIndicator()),
+              );
+              
+              final success = await SettingsService.clearCache();
+              Navigator.pop(context); // Close loading
+              
+              if (success) {
+                _showSuccess('Cache cleared successfully ($cacheSizeMB MB freed)');
+              } else {
+                _showError('Failed to clear cache');
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: LPGColors.error),
             child: Text('Clear'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: LPGColors.error,
       ),
     );
   }

@@ -733,12 +733,12 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                         border: OutlineInputBorder(),
                       ),
                       items: [
-                        DropdownMenuItem(value: null, child: Text('No sale selected')),
+                        DropdownMenuItem<String>(value: null, child: Text('No sale selected')),
                         ...recentSales.map((sale) {
                           final customer = sale['customer'] ?? sale['lpg_customers'] ?? {};
                           final customerName = customer['name'] ?? 'Unknown';
                           final invoiceNumber = sale['invoice_number'] ?? 'N/A';
-                          return DropdownMenuItem(
+                          return DropdownMenuItem<String>(
                             value: sale['id'],
                             child: Text('$invoiceNumber - $customerName'),
                           );

@@ -19,11 +19,20 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
   final List<Map<String, dynamic>> _cartItems = [];
   String _paymentMethod = 'Cash';
   final _discountController = TextEditingController(text: '0');
+  final _deliveryAddressController = TextEditingController();
+  bool _useCustomerAddress = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _discountController.dispose();
+    _deliveryAddressController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -89,6 +98,9 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
         }).toList(),
         'payment_method': _paymentMethod,
         'payment_status': _paymentMethod == 'Credit' ? 'pending' : 'paid',
+        'delivery_address': _deliveryAddressController.text.trim().isNotEmpty 
+            ? _deliveryAddressController.text.trim() 
+            : null,
       };
 
       print('Creating sale with data: $saleData');
@@ -121,6 +133,8 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                     padding: EdgeInsets.all(16),
                     children: [
                       _buildCustomerSelector(),
+                      SizedBox(height: 16),
+                      _buildDeliveryAddressSection(),
                       SizedBox(height: 16),
                       _buildProductSelector(),
                       SizedBox(height: 16),
@@ -355,6 +369,50 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
     );
   }
 
+  Widget _buildDeliveryAddressSection() {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Delivery Address', style: LPGTextStyles.subtitle1),
+            SizedBox(height: 12),
+            if (_selectedCustomer != null && _selectedCustomer!.primaryPremises != null)
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Use customer address', style: LPGTextStyles.body2),
+                value: _useCustomerAddress,
+                onChanged: (value) {
+                  setState(() {
+                    _useCustomerAddress = value ?? false;
+                    if (_useCustomerAddress) {
+                      _deliveryAddressController.text = 
+                          _selectedCustomer!.primaryPremises!.fullAddress;
+                    } else {
+                      _deliveryAddressController.clear();
+                    }
+                  });
+                },
+              ),
+            SizedBox(height: 8),
+            TextFormField(
+              controller: _deliveryAddressController,
+              decoration: InputDecoration(
+                labelText: 'Delivery Address',
+                hintText: 'Enter delivery address (optional)',
+                prefixIcon: Icon(Icons.location_on),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              maxLines: 3,
+              enabled: !_useCustomerAddress,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showCustomerPicker() {
     showModalBottomSheet(
       context: context,
@@ -368,7 +426,11 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
               leading: Icon(Icons.person_outline),
               title: Text('Walk-in Customer'),
               onTap: () {
-                setState(() => _selectedCustomer = null);
+                setState(() {
+                  _selectedCustomer = null;
+                  _useCustomerAddress = false;
+                  _deliveryAddressController.clear();
+                });
                 Navigator.pop(context);
               },
             ),
@@ -383,7 +445,11 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                     title: Text(customer.displayName),
                     subtitle: Text(customer.phone),
                     onTap: () {
-                      setState(() => _selectedCustomer = customer);
+                      setState(() {
+                        _selectedCustomer = customer;
+                        _useCustomerAddress = false;
+                        _deliveryAddressController.clear();
+                      });
                       Navigator.pop(context);
                     },
                   );
