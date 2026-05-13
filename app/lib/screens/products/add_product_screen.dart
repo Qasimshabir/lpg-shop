@@ -1,7 +1,11 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+import 'dart:io';
 import '../../services/lpg_api_service.dart';
 import '../../models/lpg_product.dart';
 import '../../lpg_theme.dart';
+import '../../widgets/product_image_widget.dart';
 
 class AddProductScreen extends StatefulWidget {
   final LPGProduct? product; // null for add, non-null for edit
@@ -15,6 +19,9 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
+  final ImagePicker _imagePicker = ImagePicker();
+  File? _selectedImage;
+  String? _imageBase64;
 
   // Form controllers
   final _nameController = TextEditingController();
@@ -70,6 +77,81 @@ class _AddProductScreenState extends State<AddProductScreen> {
       _emptyController.text = product.cylinderStates!.empty.toString();
       _filledController.text = product.cylinderStates!.filled.toString();
     }
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final File imageFile = File(pickedFile.path);
+        final bytes = await imageFile.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        
+        // Get file extension
+        final extension = pickedFile.path.split('.').last.toLowerCase();
+        final mimeType = extension == 'png' ? 'png' : 'jpeg';
+        
+        setState(() {
+          _selectedImage = imageFile;
+          _imageBase64 = 'data:image/$mimeType;base64,$base64Image';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: LPGColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera),
+              title: const Text('Take Photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            if (_selectedImage != null || (isEditMode && widget.product!.imageUrl != null))
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Remove Image', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedImage = null;
+                    _imageBase64 = null;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   final List<String> _categories = [
