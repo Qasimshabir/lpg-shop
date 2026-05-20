@@ -304,17 +304,20 @@ const getComplianceReport = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
-    // Get checklists summary
+    // Use RPC or direct SQL to bypass RLS for admin/reporting purposes
+    // Get all checklists (service key should bypass RLS)
     const { data: checklists, error: checklistError } = await supabase
       .from('safety_checklists')
-      .select('passed');
+      .select('passed')
+      .eq('checked_by', req.user.id); // Filter by current user
 
     if (checklistError) throw checklistError;
 
-    // Get incidents summary
+    // Get all incidents for current user
     const { data: incidents, error: incidentError } = await supabase
       .from('safety_incidents')
-      .select('severity, status');
+      .select('severity, status')
+      .eq('reported_by', req.user.id); // Filter by current user
 
     if (incidentError) throw incidentError;
 

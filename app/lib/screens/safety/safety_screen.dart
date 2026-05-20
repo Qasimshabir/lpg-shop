@@ -676,9 +676,11 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                     'severity': severity,
                     'incident_date': DateTime.now().toIso8601String(),
                   });
+                  if (!mounted) return;
                   Navigator.pop(context);
                   _showSuccess('Incident reported successfully');
-                  _loadData();
+                  // Refresh all data including compliance report
+                  await _loadData();
                 } catch (e) {
                   _showError('Failed to report incident: $e');
                 }
@@ -807,9 +809,11 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
                     'passed': allChecked,
                     'notes': notesController.text.isEmpty ? null : notesController.text,
                   });
+                  if (!mounted) return;
                   Navigator.pop(context);
                   _showSuccess('Safety checklist created successfully');
-                  _loadData();
+                  // Refresh all data including compliance report
+                  await _loadData();
                 } catch (e) {
                   _showError('Failed to create checklist: $e');
                 }
@@ -828,7 +832,8 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
         'status': status,
       });
       _showSuccess('Incident status updated');
-      _loadData();
+      // Refresh all data including compliance report
+      await _loadData();
     } catch (e) {
       _showError('Failed to update status: $e');
     }
