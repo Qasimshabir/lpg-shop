@@ -513,6 +513,7 @@ class _AddRefillDialog extends StatefulWidget {
 }
 
 class _AddRefillDialogState extends State<_AddRefillDialog> {
+  final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController(text: '1');
   final _priceController = TextEditingController();
   String _cylinderType = '11.8kg';
@@ -522,79 +523,129 @@ class _AddRefillDialogState extends State<_AddRefillDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text('Add Refill Record'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              initialValue: _cylinderType,
-              decoration: InputDecoration(labelText: 'Cylinder Type'),
-              readOnly: true,
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('Select Cylinder Type'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: ['11.8kg', '15kg', '45.4kg'].map((t) => ListTile(
-                        title: Text(t),
-                        onTap: () {
-                          setState(() => _cylinderType = t);
-                          Navigator.pop(context);
-                        },
-                      )).toList(),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                initialValue: _cylinderType,
+                decoration: InputDecoration(
+                  labelText: 'Cylinder Type',
+                  prefixIcon: Icon(Icons.propane_tank),
+                ),
+                readOnly: true,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Select Cylinder Type'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: ['11.8kg', '15kg', '45.4kg'].map((t) => ListTile(
+                          title: Text(t),
+                          onTap: () {
+                            setState(() => _cylinderType = t);
+                            Navigator.pop(context);
+                          },
+                        )).toList(),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _quantityController,
-              decoration: InputDecoration(labelText: 'Quantity'),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: _priceController,
-              decoration: InputDecoration(labelText: 'Price per Unit', prefixText: 'Rs '),
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              initialValue: _paymentMethod,
-              decoration: InputDecoration(labelText: 'Payment Method'),
-              readOnly: true,
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text('Select Payment Method'),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: ['Cash', 'Card', 'UPI', 'Credit'].map((m) => ListTile(
-                        title: Text(m),
-                        onTap: () {
-                          setState(() => _paymentMethod = m);
-                          Navigator.pop(context);
-                        },
-                      )).toList(),
+                  );
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _quantityController,
+                decoration: InputDecoration(
+                  labelText: 'Quantity',
+                  hintText: 'Number of cylinders',
+                  prefixIcon: Icon(Icons.format_list_numbered),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Quantity is required';
+                  }
+                  final qty = int.tryParse(v.trim());
+                  if (qty == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (qty <= 0) {
+                    return 'Quantity must be greater than 0';
+                  }
+                  if (qty > 100) {
+                    return 'Quantity cannot exceed 100';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: InputDecoration(
+                  labelText: 'Price per Unit',
+                  hintText: 'Enter price',
+                  prefixText: 'Rs ',
+                  prefixIcon: Icon(Icons.currency_rupee),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Price is required';
+                  }
+                  final price = double.tryParse(v.trim());
+                  if (price == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (price <= 0) {
+                    return 'Price must be greater than 0';
+                  }
+                  if (price > 100000) {
+                    return 'Price cannot exceed Rs 1,00,000';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+              TextFormField(
+                initialValue: _paymentMethod,
+                decoration: InputDecoration(
+                  labelText: 'Payment Method',
+                  prefixIcon: Icon(Icons.payment),
+                ),
+                readOnly: true,
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text('Select Payment Method'),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: ['Cash', 'Card', 'UPI', 'Credit'].map((m) => ListTile(
+                          title: Text(m),
+                          onTap: () {
+                            setState(() => _paymentMethod = m);
+                            Navigator.pop(context);
+                          },
+                        )).toList(),
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
         ElevatedButton(
           onPressed: () {
-            final qty = int.tryParse(_quantityController.text);
-            final price = double.tryParse(_priceController.text);
-            if (qty != null && price != null) {
+            if (_formKey.currentState!.validate()) {
+              final qty = int.parse(_quantityController.text.trim());
+              final price = double.parse(_priceController.text.trim());
               Navigator.pop(context, {
                 'cylinderType': _cylinderType,
                 'quantity': qty,
