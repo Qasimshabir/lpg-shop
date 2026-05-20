@@ -205,27 +205,93 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _nameController,
-              decoration: InputDecoration(labelText: 'Full Name *'),
-              validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: 'Full Name *',
+                hintText: 'Enter customer name',
+                prefixIcon: Icon(Icons.person),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Name is required';
+                }
+                if (v.trim().length < 2) {
+                  return 'Name must be at least 2 characters';
+                }
+                if (v.trim().length > 100) {
+                  return 'Name must not exceed 100 characters';
+                }
+                // Check if name contains only letters, spaces, and common punctuation
+                if (!RegExp(r"^[a-zA-Z\s\.\-']+$").hasMatch(v.trim())) {
+                  return 'Name can only contain letters, spaces, and basic punctuation';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
               controller: _phoneController,
-              decoration: InputDecoration(labelText: 'Phone Number *', prefixIcon: Icon(Icons.phone)),
+              decoration: InputDecoration(
+                labelText: 'Phone Number *',
+                hintText: '10-digit mobile number',
+                prefixIcon: Icon(Icons.phone),
+              ),
               keyboardType: TextInputType.phone,
-              validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              maxLength: 10,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Phone number is required';
+                }
+                // Remove any spaces or special characters
+                final cleaned = v.replaceAll(RegExp(r'[^\d]'), '');
+                if (cleaned.length != 10) {
+                  return 'Phone number must be exactly 10 digits';
+                }
+                if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+                  return 'Invalid phone number format';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
               controller: _alternatePhoneController,
-              decoration: InputDecoration(labelText: 'Alternate Phone', prefixIcon: Icon(Icons.phone)),
+              decoration: InputDecoration(
+                labelText: 'Alternate Phone',
+                hintText: '10-digit mobile number (optional)',
+                prefixIcon: Icon(Icons.phone),
+              ),
               keyboardType: TextInputType.phone,
+              maxLength: 10,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                final cleaned = v.replaceAll(RegExp(r'[^\d]'), '');
+                if (cleaned.length != 10) {
+                  return 'Phone number must be exactly 10 digits';
+                }
+                if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+                  return 'Invalid phone number format';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email)),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                hintText: 'example@email.com (optional)',
+                prefixIcon: Icon(Icons.email),
+              ),
               keyboardType: TextInputType.emailAddress,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                // Basic email validation
+                if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w+$').hasMatch(v.trim())) {
+                  return 'Invalid email format';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -244,13 +310,45 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _businessNameController,
-              decoration: InputDecoration(labelText: 'Business Name *'),
-              validator: (v) => _customerType == 'Business' && (v?.isEmpty ?? true) ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: 'Business Name *',
+                hintText: 'Enter business name',
+                prefixIcon: Icon(Icons.business),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) {
+                if (_customerType == 'Business' || _customerType == 'Institution') {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Business name is required';
+                  }
+                  if (v.trim().length < 2) {
+                    return 'Business name must be at least 2 characters';
+                  }
+                  if (v.trim().length > 200) {
+                    return 'Business name must not exceed 200 characters';
+                  }
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
               controller: _gstNumberController,
-              decoration: InputDecoration(labelText: 'GST Number'),
+              decoration: InputDecoration(
+                labelText: 'GST Number',
+                hintText: '15-character GST number (optional)',
+                prefixIcon: Icon(Icons.receipt_long),
+              ),
+              textCapitalization: TextCapitalization.characters,
+              maxLength: 15,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                // GST format: 2 digits (state code) + 10 alphanumeric (PAN) + 1 digit + 1 letter + 1 alphanumeric
+                if (!RegExp(r'^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$').hasMatch(v.trim())) {
+                  return 'Invalid GST number format';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -269,13 +367,32 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _premisesNameController,
-              decoration: InputDecoration(labelText: 'Premises Name *', hintText: 'e.g., Home, Office'),
-              validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: 'Premises Name *',
+                hintText: 'e.g., Home, Office, Factory',
+                prefixIcon: Icon(Icons.home),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Premises name is required';
+                }
+                if (v.trim().length < 2) {
+                  return 'Premises name must be at least 2 characters';
+                }
+                if (v.trim().length > 100) {
+                  return 'Premises name must not exceed 100 characters';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _premisesType,
-              decoration: InputDecoration(labelText: 'Premises Type'),
+              decoration: InputDecoration(
+                labelText: 'Premises Type',
+                prefixIcon: Icon(Icons.category),
+              ),
               items: ['Residential', 'Commercial', 'Industrial', 'Restaurant', 'Hotel']
                   .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
@@ -284,8 +401,25 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _streetController,
-              decoration: InputDecoration(labelText: 'Street Address *'),
-              validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+              decoration: InputDecoration(
+                labelText: 'Street Address *',
+                hintText: 'House/Building number, Street name',
+                prefixIcon: Icon(Icons.location_on),
+              ),
+              textCapitalization: TextCapitalization.words,
+              maxLines: 2,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Street address is required';
+                }
+                if (v.trim().length < 5) {
+                  return 'Address must be at least 5 characters';
+                }
+                if (v.trim().length > 200) {
+                  return 'Address must not exceed 200 characters';
+                }
+                return null;
+              },
             ),
             SizedBox(height: 16),
             Row(
@@ -293,16 +427,48 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _cityController,
-                    decoration: InputDecoration(labelText: 'City *'),
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    decoration: InputDecoration(
+                      labelText: 'City *',
+                      hintText: 'City name',
+                      prefixIcon: Icon(Icons.location_city),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'City is required';
+                      }
+                      if (v.trim().length < 2) {
+                        return 'City must be at least 2 characters';
+                      }
+                      if (!RegExp(r"^[a-zA-Z\s\-]+$").hasMatch(v.trim())) {
+                        return 'City can only contain letters';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 SizedBox(width: 16),
                 Expanded(
                   child: TextFormField(
                     controller: _stateController,
-                    decoration: InputDecoration(labelText: 'State *'),
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    decoration: InputDecoration(
+                      labelText: 'State *',
+                      hintText: 'State name',
+                      prefixIcon: Icon(Icons.map),
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'State is required';
+                      }
+                      if (v.trim().length < 2) {
+                        return 'State must be at least 2 characters';
+                      }
+                      if (!RegExp(r"^[a-zA-Z\s\-]+$").hasMatch(v.trim())) {
+                        return 'State can only contain letters';
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -313,16 +479,42 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
                 Expanded(
                   child: TextFormField(
                     controller: _pincodeController,
-                    decoration: InputDecoration(labelText: 'Pincode *'),
+                    decoration: InputDecoration(
+                      labelText: 'Pincode *',
+                      hintText: '6-digit pincode',
+                      prefixIcon: Icon(Icons.pin_drop),
+                    ),
                     keyboardType: TextInputType.number,
-                    validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                    maxLength: 6,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Pincode is required';
+                      }
+                      // Remove any non-digit characters
+                      final cleaned = v.replaceAll(RegExp(r'[^\d]'), '');
+                      if (cleaned.length != 6) {
+                        return 'Pincode must be exactly 6 digits';
+                      }
+                      // Check if it's a valid number (no alphabets)
+                      if (!RegExp(r'^\d{6}$').hasMatch(cleaned)) {
+                        return 'Pincode must contain only digits';
+                      }
+                      // Check if it starts with 0 (invalid in India)
+                      if (cleaned.startsWith('0')) {
+                        return 'Invalid pincode';
+                      }
+                      return null;
+                    },
                   ),
                 ),
                 SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     value: _cylinderCapacity,
-                    decoration: InputDecoration(labelText: 'Cylinder Size'),
+                    decoration: InputDecoration(
+                      labelText: 'Cylinder Size',
+                      prefixIcon: Icon(Icons.propane_tank),
+                    ),
                     items: ['11.8kg', '15kg', '45.4kg']
                         .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                         .toList(),
@@ -334,7 +526,19 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _landmarkController,
-              decoration: InputDecoration(labelText: 'Landmark'),
+              decoration: InputDecoration(
+                labelText: 'Landmark',
+                hintText: 'Nearby landmark (optional)',
+                prefixIcon: Icon(Icons.place),
+              ),
+              textCapitalization: TextCapitalization.words,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return null;
+                if (v.trim().length > 200) {
+                  return 'Landmark must not exceed 200 characters';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -350,11 +554,38 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Credit Settings', style: LPGTextStyles.subtitle1),
+            SizedBox(height: 8),
+            Text(
+              'Set credit limit for this customer (optional)',
+              style: LPGTextStyles.caption.copyWith(color: LPGColors.textSecondary),
+            ),
             SizedBox(height: 16),
             TextFormField(
               controller: _creditLimitController,
-              decoration: InputDecoration(labelText: 'Credit Limit', prefixText: 'Rs '),
+              decoration: InputDecoration(
+                labelText: 'Credit Limit',
+                hintText: 'Enter amount (0 for no credit)',
+                prefixText: 'Rs ',
+                prefixIcon: Icon(Icons.account_balance_wallet),
+                helperText: 'Maximum credit amount allowed',
+              ),
               keyboardType: TextInputType.number,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Credit limit is required (enter 0 for no credit)';
+                }
+                final amount = double.tryParse(v.trim());
+                if (amount == null) {
+                  return 'Please enter a valid number';
+                }
+                if (amount < 0) {
+                  return 'Credit limit cannot be negative';
+                }
+                if (amount > 1000000) {
+                  return 'Credit limit cannot exceed Rs 10,00,000';
+                }
+                return null;
+              },
             ),
           ],
         ),
