@@ -1,4 +1,7 @@
 ﻿import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
@@ -388,7 +391,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _generateMonthlyReport() async {
     final today = DateTime.now();
-    final startDate = DateTime(today.year, today.month, 1).toIso8601String();
+    final startDate = today.subtract(Duration(days: 30)).toIso8601String();
     final endDate = today.toIso8601String();
     
     await _showReportDetails('Monthly Report', startDate, endDate);
@@ -485,6 +488,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
         startDate: startDate,
         endDate: endDate,
       );
+      
+      // Get sales data to calculate payment status
+      final sales = await LPGApiService.getLPGSales(
+        startDate: startDate,
+        endDate: endDate,
+        limit: 1000,
+      );
+      
+      // Calculate payment status counts
+      int paidCount = 0;
+      int pendingCount = 0;
+      int failedCount = 0;
+      
+      for (var sale in sales) {
+        final status = (sale['payment_status'] ?? sale['paymentStatus'] ?? 'pending').toString().toLowerCase();
+        if (status == 'paid') {
+          paidCount++;
+        } else if (status == 'pending') {
+          pendingCount++;
+        } else if (status == 'failed') {
+          failedCount++;
+        }
+      }
 
       // Close loading dialog
       if (mounted) Navigator.pop(context);
@@ -510,9 +536,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   Divider(),
                   Text('Payment Status', style: LPGTextStyles.subtitle1),
                   SizedBox(height: 8),
-                  _buildReportRow('Paid', '${report['paymentStatus']?['paid'] ?? 0}'),
-                  _buildReportRow('Pending', '${report['paymentStatus']?['pending'] ?? 0}'),
-                  _buildReportRow('Failed', '${report['paymentStatus']?['failed'] ?? 0}'),
+                  _buildReportRow('Paid', '$paidCount'),
+                  _buildReportRow('Pending', '$pendingCount'),
+                  _buildReportRow('Failed', '$failedCount'),
                 ],
               ),
             ),
@@ -522,11 +548,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 child: Text('Close'),
               ),
               ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Export feature coming soon!')),
-                  );
-                },
+                onPressed: () => _exportReport(
+                  title,
+                  startDate,
+                  endDate,
+                  report,
+                  paidCount,
+                  pendingCount,
+                  failedCount,
+                ),
                 icon: Icon(Icons.download),
                 label: Text('Export'),
               ),
@@ -537,6 +567,82 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } catch (e) {
       if (mounted) Navigator.pop(context); // Close loading dialog
       _showError('Failed to generate report: $e');
+    }
+  }
+
+  Future<void> _exportReport(
+    String title,
+    String startDate,
+    String endDate,
+    Map<String, dynamic> report,
+    int paidCount,
+    int pendingCount,
+    int failedCount,
+  ) async {
+    try {
+      // Create report content
+      final buffer = StringBuffer();
+      buffer.writeln('=' * 50);
+      buffer.writeln(title.toUpperCase());
+      buffer.writeln('=' * 50);
+      buffer.writeln();
+      buffer.writeln('Generated: ${DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now())}');
+      buffer.writeln('Period: ${_formatDate(startDate)} - ${_formatDate(endDate)}');
+      buffer.writeln();
+      buffer.writeln('-' * 50);
+      buffer.writeln('SALES SUMMARY');
+      buffer.writeln('-' * 50);
+      buffer.writeln('Total Sales: ${report['summary']?['totalSales'] ?? 0}');
+      buffer.writeln('Total Revenue: Rs${((report['summary']?['totalRevenue'] ?? 0) as num).toStringAsFixed(2)}');
+      buffer.writeln('Average Sale: Rs${((report['summary']?['avgSaleValue'] ?? 0) as num).toStringAsFixed(2)}');
+      buffer.writeln();
+      buffer.writeln('-' * 50);
+      buffer.writeln('PAYMENT STATUS');
+      buffer.writeln('-' * 50);
+      buffer.writeln('Paid: $paidCount');
+      buffer.writeln('Pending: $pendingCount');
+      buffer.writeln('Failed: $failedCount');
+      buffer.writeln();
+      buffer.writeln('=' * 50);
+      buffer.writeln('End of Report');
+      buffer.writeln('=' * 50);
+
+      // Get appropriate directory based on platform
+      Directory? directory;
+      try {
+        if (Platform.isAndroid) {
+          directory = await getExternalStorageDirectory();
+        } else {
+          directory = await getApplicationDocumentsDirectory();
+        }
+      } catch (e) {
+        directory = await getApplicationDocumentsDirectory();
+      }
+      
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final fileName = 'report_${timestamp}.txt';
+      final file = File('${directory!.path}/$fileName');
+
+      // Write to file
+      await file.writeAsString(buffer.toString());
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report exported successfully!\nSaved to: ${file.path}'),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'OK',
+              textColor: Colors.white,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError('Failed to export report: $e');
     }
   }
 
