@@ -216,6 +216,16 @@ class LPGApiService {
     return LPGProduct.fromJson(data['data']);
   }
 
+  static Future<LPGProduct> returnCylinder(String id, int quantity) async {
+    final response = await http.post(
+      Uri.parse('$_baseUrl/products/$id/return-cylinder'),
+      headers: await _getHeaders(),
+      body: json.encode({'quantity': quantity}),
+    );
+    final data = _handleResponse(response);
+    return LPGProduct.fromJson(data['data']);
+  }
+
   static Future<List<LPGProduct>> getLowStockProducts() async {
     final response = await http.get(
       Uri.parse('$_baseUrl/products/low-stock'),

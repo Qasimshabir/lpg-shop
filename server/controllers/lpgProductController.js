@@ -190,6 +190,12 @@ const createLPGProduct = async (req, res, next) => {
 
     if (error) throw error;
 
+    console.log('=== PRODUCT CREATED ===');
+    console.log('Database response:', JSON.stringify(product, null, 2));
+    console.log('cost_price:', product.cost_price);
+    console.log('deposit_amount:', product.deposit_amount);
+    console.log('refill_price:', product.refill_price);
+
     res.status(201).json({
       success: true,
       message: 'Product created successfully',
@@ -651,6 +657,86 @@ const getProductsDueForInspection = async (req, res, next) => {
   }
 };
 
+// @desc    Return cylinders from customers
+// @route   POST /api/products/:id/return-cylinder
+// @access  Private
+const returnCylinder = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity must be greater than 0'
+      });
+    }
+
+    const { data: product, error: fetchError } = await supabase
+      .from('lpg_products')
+      .select('stock_quantity, cylinder_states, product_type')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .single();
+
+    if (fetchError || !product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+
+    if (product.product_type !== 'cylinder') {
+      return res.status(400).json({
+        success: false,
+        message: 'This operation is only for cylinder products'
+      });
+    }
+
+    // Get current cylinder states or initialize
+    const cylinderStates = product.cylinder_states || { empty: 0, filled: 0, sold: 0 };
+    
+    // Check if enough sold cylinders to return
+    if ((cylinderStates.sold || 0) < quantity) {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot return ${quantity} cylinders. Only ${cylinderStates.sold || 0} are currently sold.`
+      });
+    }
+
+    // Return: decrease sold, increase empty
+    const newStates = {
+      empty: (cylinderStates.empty || 0) + quantity,
+      filled: cylinderStates.filled || 0,
+      sold: (cylinderStates.sold || 0) - quantity
+    };
+
+    // Calculate new stock quantity (empty + filled)
+    const newStockQuantity = newStates.empty + newStates.filled;
+
+    const { data: updated, error } = await supabase
+      .from('lpg_products')
+      .update({ 
+        stock_quantity: newStockQuantity,
+        cylinder_states: newStates
+      })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Cylinders returned successfully',
+      data: updated
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getLPGProducts,
   getLPGProduct,
@@ -659,6 +745,7 @@ module.exports = {
   deleteLPGProduct,
   updateCylinderState,
   exchangeCylinder,
+  returnCylinder,
   getLowStockProducts,
   getProductsByCategory,
   getCylinderSummary,

@@ -209,6 +209,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Debug: Log all controller values before building productData
+      print('=== FORM CONTROLLER VALUES ===');
+      print('Name: ${_nameController.text}');
+      print('Price: ${_priceController.text}');
+      print('Cost Price: ${_costPriceController.text}');
+      print('Product Type: $_productType');
+      print('Deposit Amount Controller: "${_depositAmountController.text}"');
+      print('Refill Price Controller: "${_refillPriceController.text}"');
+      
       final productData = {
         'name': _nameController.text.trim(),
         'brand': _brandController.text.trim(),
@@ -229,21 +238,38 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_productType == 'cylinder') {
         productData['cylinderType'] = _cylinderType!;
         productData['capacity'] = _capacity!;
-        productData['depositAmount'] = _depositAmountController.text.isEmpty 
+        
+        // Debug: Log controller values
+        print('=== FRONTEND DEBUG ===');
+        print('depositAmountController.text: "${_depositAmountController.text}"');
+        print('refillPriceController.text: "${_refillPriceController.text}"');
+        
+        final depositAmount = _depositAmountController.text.isEmpty 
             ? 0.0 
             : double.parse(_depositAmountController.text);
-        productData['refillPrice'] = _refillPriceController.text.isEmpty 
+        final refillPrice = _refillPriceController.text.isEmpty 
             ? 0.0 
             : double.parse(_refillPriceController.text);
+            
+        print('Parsed depositAmount: $depositAmount');
+        print('Parsed refillPrice: $refillPrice');
+        
+        productData['depositAmount'] = depositAmount;
+        productData['refillPrice'] = refillPrice;
         productData['cylinderStates'] = {
           'empty': int.parse(_emptyController.text),
           'filled': int.parse(_filledController.text),
           'sold': 0,
         };
+        
+        print('Final productData: $productData');
       } else {
         productData['stock'] = int.parse(_stockController.text);
         productData['minStock'] = int.parse(_minStockController.text);
       }
+
+      print('=== SENDING TO API ===');
+      print('Product Data: ${json.encode(productData)}');
 
       if (isEditMode) {
         await LPGApiService.updateLPGProduct(widget.product!.id, productData);

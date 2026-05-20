@@ -489,13 +489,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showExchangeDialog(),
-                icon: Icon(Icons.swap_horiz),
-                label: Text('Exchange Cylinders'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showExchangeDialog(),
+                    icon: Icon(Icons.swap_horiz),
+                    label: Text('Exchange'),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showReturnDialog(),
+                    icon: Icon(Icons.keyboard_return),
+                    label: Text('Return'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: LPGColors.info,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -614,6 +628,74 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               }
             },
             child: Text('Exchange'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReturnDialog() {
+    final controller = TextEditingController();
+    final soldCount = _product.cylinderStates?.sold ?? 0;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Return Cylinders'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Customers returning empty cylinders'),
+            SizedBox(height: 8),
+            Text(
+              'Currently sold: $soldCount cylinders',
+              style: LPGTextStyles.body2.copyWith(color: LPGColors.textSecondary),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Quantity',
+                hintText: 'Number of cylinders returned',
+                helperText: 'Empty cylinders returned by customers',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final quantity = int.tryParse(controller.text);
+              if (quantity == null || quantity <= 0) {
+                _showError('Please enter a valid quantity');
+                return;
+              }
+              if (quantity > soldCount) {
+                _showError('Cannot return more than $soldCount sold cylinders');
+                return;
+              }
+              Navigator.pop(context);
+              try {
+                setState(() => _isLoading = true);
+                final updated = await LPGApiService.returnCylinder(_product.id, quantity);
+                setState(() {
+                  _product = updated;
+                  _isLoading = false;
+                });
+                _showSuccess('$quantity cylinders returned successfully');
+              } catch (e) {
+                setState(() => _isLoading = false);
+                _showError('Failed to return cylinders: $e');
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: LPGColors.info),
+            child: Text('Return'),
           ),
         ],
       ),

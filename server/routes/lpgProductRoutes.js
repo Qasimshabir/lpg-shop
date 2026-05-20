@@ -7,6 +7,7 @@ const {
   deleteLPGProduct,
   updateCylinderState,
   exchangeCylinder,
+  returnCylinder,
   getLowStockProducts,
   getProductsByCategory,
   getCylinderSummary,
@@ -38,5 +39,6 @@ router.route('/:id')
 // Cylinder-specific routes
 router.put('/:id/cylinder-state', updateCylinderState);
 router.put('/:id/exchange', exchangeCylinder);
+router.post('/:id/return-cylinder', returnCylinder);
 
 module.exports = router;

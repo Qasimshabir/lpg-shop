@@ -60,19 +60,41 @@ const createLPGSale = async (req, res, next) => {
     
     if (itemsError) throw itemsError;
     
-    // Update product stock
+    // Update product stock and cylinder states
     for (let item of items) {
       const { data: product } = await supabase
         .from('lpg_products')
-        .select('stock_quantity')
+        .select('stock_quantity, cylinder_states, product_type')
         .eq('id', item.product_id)
         .single();
       
       if (product) {
-        await supabase
-          .from('lpg_products')
-          .update({ stock_quantity: product.stock_quantity - item.quantity })
-          .eq('id', item.product_id);
+        if (product.product_type === 'cylinder' && product.cylinder_states) {
+          // Update cylinder states for cylinder products
+          const states = product.cylinder_states;
+          const newStates = {
+            empty: states.empty || 0,
+            filled: Math.max(0, (states.filled || 0) - item.quantity),
+            sold: (states.sold || 0) + item.quantity
+          };
+          
+          // Calculate new stock quantity (empty + filled)
+          const newStockQuantity = newStates.empty + newStates.filled;
+          
+          await supabase
+            .from('lpg_products')
+            .update({ 
+              stock_quantity: newStockQuantity,
+              cylinder_states: newStates
+            })
+            .eq('id', item.product_id);
+        } else {
+          // For non-cylinder products, just update stock
+          await supabase
+            .from('lpg_products')
+            .update({ stock_quantity: product.stock_quantity - item.quantity })
+            .eq('id', item.product_id);
+        }
       }
     }
     
