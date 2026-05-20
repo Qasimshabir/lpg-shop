@@ -106,9 +106,11 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         'isActive': true,
       };
 
+      LPGCustomer savedCustomer;
+      
       if (widget.customer != null) {
         // Update existing customer
-        await LPGApiService.updateLPGCustomer(widget.customer!.id, customerData);
+        savedCustomer = await LPGApiService.updateLPGCustomer(widget.customer!.id, customerData);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Customer updated successfully!'), backgroundColor: LPGColors.success),
@@ -116,7 +118,27 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
         }
       } else {
         // Create new customer
-        await LPGApiService.createLPGCustomer(customerData);
+        savedCustomer = await LPGApiService.createLPGCustomer(customerData);
+        
+        // Add premises for new customer
+        if (_premisesNameController.text.trim().isNotEmpty) {
+          try {
+            final premisesData = {
+              'premises_type': _premisesType,
+              'address': _streetController.text.trim(),
+              'city': _cityController.text.trim(),
+              'state': _stateController.text.trim(),
+              'postal_code': _pincodeController.text.trim(),
+              'is_primary': true,
+            };
+            
+            await LPGApiService.addPremises(savedCustomer.id, premisesData);
+          } catch (e) {
+            print('Failed to add premises: $e');
+            // Don't fail the whole operation if premises creation fails
+          }
+        }
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Customer added successfully!'), backgroundColor: LPGColors.success),
@@ -233,21 +255,21 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
               controller: _phoneController,
               decoration: InputDecoration(
                 labelText: 'Phone Number *',
-                hintText: '10-digit mobile number',
+                hintText: '10 or 11-digit mobile number',
                 prefixIcon: Icon(Icons.phone),
               ),
               keyboardType: TextInputType.phone,
-              maxLength: 10,
+              maxLength: 11,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
                   return 'Phone number is required';
                 }
                 // Remove any spaces or special characters
                 final cleaned = v.replaceAll(RegExp(r'[^\d]'), '');
-                if (cleaned.length != 10) {
-                  return 'Phone number must be exactly 10 digits';
+                if (cleaned.length < 10 || cleaned.length > 11) {
+                  return 'Phone number must be 10 or 11 digits';
                 }
-                if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+                if (!RegExp(r'^[6-9]\d{9,10}$').hasMatch(cleaned)) {
                   return 'Invalid phone number format';
                 }
                 return null;
@@ -258,18 +280,18 @@ class _AddCustomerScreenState extends State<AddCustomerScreen> {
               controller: _alternatePhoneController,
               decoration: InputDecoration(
                 labelText: 'Alternate Phone',
-                hintText: '10-digit mobile number (optional)',
+                hintText: '10 or 11-digit mobile number (optional)',
                 prefixIcon: Icon(Icons.phone),
               ),
               keyboardType: TextInputType.phone,
-              maxLength: 10,
+              maxLength: 11,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return null;
                 final cleaned = v.replaceAll(RegExp(r'[^\d]'), '');
-                if (cleaned.length != 10) {
-                  return 'Phone number must be exactly 10 digits';
+                if (cleaned.length < 10 || cleaned.length > 11) {
+                  return 'Phone number must be 10 or 11 digits';
                 }
-                if (!RegExp(r'^[6-9]\d{9}$').hasMatch(cleaned)) {
+                if (!RegExp(r'^[6-9]\d{9,10}$').hasMatch(cleaned)) {
                   return 'Invalid phone number format';
                 }
                 return null;
