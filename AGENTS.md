@@ -100,6 +100,10 @@ server/
 - **Stock Calculation**: Trigger automatically calculates stock_quantity = empty + filled
 - **Summary Dashboard**: View cylinder counts by type
 - **Consistency**: Database trigger ensures data integrity
+- **Individual Tracking**: Track specific cylinders by SKU
+- **Status Management**: Available, In Use, Maintenance, Retired
+- **Validation**: Prevents duplicate tracking, validates product selection
+- **Visual Status Indicators**: Color-coded status badges with icons
 
 ### 5. Safety Compliance
 - **Incident Reporting**: Log safety incidents with severity levels

@@ -56,6 +56,137 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     }
   }
 
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: LPGColors.error),
+            SizedBox(width: 8),
+            Text('Delete Customer'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this customer?',
+              style: LPGTextStyles.body1,
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: LPGColors.error),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _customer.name,
+                          style: LPGTextStyles.subtitle2.copyWith(
+                            color: LPGColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    _customer.phone,
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, size: 16, color: LPGColors.warning),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action cannot be undone. All customer data, including refill history and premises, will be permanently deleted.',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LPGColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteCustomer();
+    }
+  }
+
+  Future<void> _deleteCustomer() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      await LPGApiService.deleteLPGCustomer(_customer.id);
+      
+      if (mounted) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Customer "${_customer.name}" deleted successfully'),
+                ),
+              ],
+            ),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        
+        // Navigate back to customers list
+        Navigator.pop(context, true); // Return true to indicate deletion
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Failed to delete customer: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,11 +197,29 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
           PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'edit') _showComingSoon('Edit Customer');
-              else if (value == 'delete') _showComingSoon('Delete Customer');
+              else if (value == 'delete') _confirmDelete();
             },
             itemBuilder: (context) => [
-              PopupMenuItem(value: 'edit', child: Text('Edit')),
-              PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: LPGColors.error))),
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit, size: 18, color: LPGColors.textPrimary),
+                    SizedBox(width: 8),
+                    Text('Edit'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 18, color: LPGColors.error),
+                    SizedBox(width: 8),
+                    Text('Delete', style: TextStyle(color: LPGColors.error)),
+                  ],
+                ),
+              ),
             ],
           ),
         ],

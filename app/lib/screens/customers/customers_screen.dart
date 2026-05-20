@@ -279,8 +279,85 @@ class _CustomersScreenState extends State<CustomersScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete Customer'),
-        content: Text('Are you sure you want to delete ${customer.displayName}? This action cannot be undone.'),
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: LPGColors.error),
+            SizedBox(width: 8),
+            Text('Delete Customer'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this customer?',
+              style: LPGTextStyles.body1,
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: LPGColors.error),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          customer.displayName,
+                          style: LPGTextStyles.subtitle2.copyWith(
+                            color: LPGColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    customer.phone,
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                  if (customer.totalRefills > 0) ...[
+                    SizedBox(height: 8),
+                    Text(
+                      '${customer.totalRefills} refills • Rs${customer.totalSpent.toStringAsFixed(0)} spent',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, size: 16, color: LPGColors.warning),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action cannot be undone. All customer data, including refill history and premises, will be permanently deleted.',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -291,7 +368,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
               Navigator.pop(context);
               _deleteCustomer(customer);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: LPGColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LPGColors.error,
+              foregroundColor: Colors.white,
+            ),
             child: Text('Delete'),
           ),
         ],
@@ -301,15 +381,53 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
   Future<void> _deleteCustomer(LPGCustomer customer) async {
     try {
-      await LPGApiService.deleteLPGCustomer(customer.id);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Customer deleted successfully'),
-          backgroundColor: LPGColors.success,
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Deleting customer...'),
+                ],
+              ),
+            ),
+          ),
         ),
       );
-      _loadCustomers();
+
+      await LPGApiService.deleteLPGCustomer(customer.id);
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Customer "${customer.displayName}" deleted successfully'),
+                ),
+              ],
+            ),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        _loadCustomers();
+      }
     } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
       _showError('Failed to delete customer: $e');
     }
   }

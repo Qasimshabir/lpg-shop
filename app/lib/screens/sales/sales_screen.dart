@@ -186,13 +186,14 @@ class _SalesScreenState extends State<SalesScreen> {
     return Card(
       margin: EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          final result = await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => SaleDetailScreen(sale: sale),
             ),
           );
+          if (result == true) _loadSales();
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
@@ -224,6 +225,23 @@ class _SalesScreenState extends State<SalesScreen> {
                     style: LPGTextStyles.heading3.copyWith(
                       color: LPGColors.success,
                     ),
+                  ),
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'delete') _confirmDelete(sale);
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: LPGColors.error),
+                            SizedBox(width: 8),
+                            Text('Delete', style: TextStyle(color: LPGColors.error)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -266,5 +284,165 @@ class _SalesScreenState extends State<SalesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: LPGColors.error),
     );
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> sale) async {
+    final invoiceNumber = sale['invoiceNumber'] ?? sale['invoice_number'] ?? 'N/A';
+    final total = (sale['total'] ?? sale['totalAmount'] ?? sale['total_amount'] ?? 0).toDouble();
+    final items = (sale['items'] ?? sale['sale_items']) as List? ?? [];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: LPGColors.error),
+            SizedBox(width: 8),
+            Text('Delete Sale'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this sale?',
+              style: LPGTextStyles.body1,
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.receipt, size: 16, color: LPGColors.error),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Invoice: $invoiceNumber',
+                          style: LPGTextStyles.subtitle2.copyWith(
+                            color: LPGColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Amount: Rs${total.toStringAsFixed(2)}',
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                  Text(
+                    '${items.length} item${items.length != 1 ? 's' : ''}',
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, size: 16, color: LPGColors.warning),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action cannot be undone. The sale record will be permanently deleted. Note: This will NOT restore cylinder inventory.',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LPGColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteSale(sale);
+    }
+  }
+
+  Future<void> _deleteSale(Map<String, dynamic> sale) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Deleting sale...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final saleId = sale['id'];
+      await LPGApiService.deleteLPGSale(saleId);
+      
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Sale deleted successfully'),
+                ),
+              ],
+            ),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        _loadSales();
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+      _showError('Failed to delete sale: $e');
+    }
   }
 }

@@ -1,25 +1,33 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../lpg_theme.dart';
+import '../../services/lpg_api_service.dart';
 
-class SaleDetailScreen extends StatelessWidget {
+class SaleDetailScreen extends StatefulWidget {
   final Map<String, dynamic> sale;
 
   const SaleDetailScreen({Key? key, required this.sale}) : super(key: key);
 
   @override
+  State<SaleDetailScreen> createState() => _SaleDetailScreenState();
+}
+
+class _SaleDetailScreenState extends State<SaleDetailScreen> {
+  bool _isLoading = false;
+
+  @override
   Widget build(BuildContext context) {
     final date = DateTime.parse(
-      sale['createdAt'] ?? sale['created_at'] ?? sale['sale_date'] ?? DateTime.now().toIso8601String()
+      widget.sale['createdAt'] ?? widget.sale['created_at'] ?? widget.sale['sale_date'] ?? DateTime.now().toIso8601String()
     );
-    final items = (sale['items'] ?? sale['sale_items']) as List? ?? [];
-    final customer = (sale['customer'] ?? sale['lpg_customers']) as Map<String, dynamic>?;
-    final total = (sale['total'] ?? sale['totalAmount'] ?? sale['total_amount'] ?? 0).toDouble();
-    final subtotal = (sale['subtotal'] ?? sale['subTotal'] ?? sale['sub_total'] ?? total).toDouble();
-    final tax = (sale['tax'] ?? sale['taxAmount'] ?? sale['tax_amount'] ?? 0).toDouble();
-    final discount = (sale['discountAmount'] ?? sale['discount_amount'] ?? sale['discount'] ?? 0).toDouble();
-    final paidAmount = (sale['paidAmount'] ?? sale['paid_amount'] ?? total).toDouble();
-    final remainingAmount = (sale['remainingAmount'] ?? sale['remaining_amount'] ?? 0).toDouble();
+    final items = (widget.sale['items'] ?? widget.sale['sale_items']) as List? ?? [];
+    final customer = (widget.sale['customer'] ?? widget.sale['lpg_customers']) as Map<String, dynamic>?;
+    final total = (widget.sale['total'] ?? widget.sale['totalAmount'] ?? widget.sale['total_amount'] ?? 0).toDouble();
+    final subtotal = (widget.sale['subtotal'] ?? widget.sale['subTotal'] ?? widget.sale['sub_total'] ?? total).toDouble();
+    final tax = (widget.sale['tax'] ?? widget.sale['taxAmount'] ?? widget.sale['tax_amount'] ?? 0).toDouble();
+    final discount = (widget.sale['discountAmount'] ?? widget.sale['discount_amount'] ?? widget.sale['discount'] ?? 0).toDouble();
+    final paidAmount = (widget.sale['paidAmount'] ?? widget.sale['paid_amount'] ?? total).toDouble();
+    final remainingAmount = (widget.sale['remainingAmount'] ?? widget.sale['remaining_amount'] ?? 0).toDouble();
 
     return Scaffold(
       appBar: AppBar(
@@ -27,35 +35,192 @@ class SaleDetailScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(Icons.share),
-            onPressed: () => _showComingSoon(context, 'Share Invoice'),
+            onPressed: () => _showComingSoon('Share Invoice'),
           ),
           IconButton(
             icon: Icon(Icons.print),
-            onPressed: () => _showComingSoon(context, 'Print Invoice'),
+            onPressed: () => _showComingSoon('Print Invoice'),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'delete') _confirmDelete();
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete, size: 18, color: LPGColors.error),
+                    SizedBox(width: 8),
+                    Text('Delete Sale', style: TextStyle(color: LPGColors.error)),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.all(16),
-        children: [
-          _buildInvoiceHeader(date),
-          SizedBox(height: 16),
-          _buildCustomerInfo(customer),
-          SizedBox(height: 16),
-          _buildItemsList(items),
-          SizedBox(height: 16),
-          _buildPricingDetails(subtotal, tax, discount, total),
-          SizedBox(height: 16),
-          _buildPaymentInfo(paidAmount, remainingAmount, sale),
-          SizedBox(height: 16),
-          _buildDeliveryInfo(sale),
-          if (sale['notes'] != null && sale['notes'].toString().isNotEmpty) ...[
-            SizedBox(height: 16),
-            _buildNotes(sale['notes']),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: EdgeInsets.all(16),
+              children: [
+                _buildInvoiceHeader(date),
+                SizedBox(height: 16),
+                _buildCustomerInfo(customer),
+                SizedBox(height: 16),
+                _buildItemsList(items),
+                SizedBox(height: 16),
+                _buildPricingDetails(subtotal, tax, discount, total),
+                SizedBox(height: 16),
+                _buildPaymentInfo(paidAmount, remainingAmount, widget.sale),
+                SizedBox(height: 16),
+                _buildDeliveryInfo(widget.sale),
+                if (widget.sale['notes'] != null && widget.sale['notes'].toString().isNotEmpty) ...[
+                  SizedBox(height: 16),
+                  _buildNotes(widget.sale['notes']),
+                ],
+              ],
+            ),
+    );
+  }
+
+  Future<void> _confirmDelete() async {
+    final invoiceNumber = widget.sale['invoiceNumber'] ?? widget.sale['invoice_number'] ?? 'N/A';
+    final total = (widget.sale['total'] ?? widget.sale['totalAmount'] ?? widget.sale['total_amount'] ?? 0).toDouble();
+    final items = (widget.sale['items'] ?? widget.sale['sale_items']) as List? ?? [];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning, color: LPGColors.error),
+            SizedBox(width: 8),
+            Text('Delete Sale'),
           ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delete this sale?',
+              style: LPGTextStyles.body1,
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.error.withOpacity(0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.receipt, size: 16, color: LPGColors.error),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Invoice: $invoiceNumber',
+                          style: LPGTextStyles.subtitle2.copyWith(
+                            color: LPGColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Amount: Rs${total.toStringAsFixed(2)}',
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                  Text(
+                    '${items.length} item${items.length != 1 ? 's' : ''}',
+                    style: LPGTextStyles.caption.copyWith(color: LPGColors.error),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.warning.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.warning.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, size: 16, color: LPGColors.warning),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This action cannot be undone. The sale record will be permanently deleted. Note: This will NOT restore cylinder inventory.',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LPGColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: Text('Delete'),
+          ),
         ],
       ),
     );
+
+    if (confirmed == true) {
+      await _deleteSale();
+    }
+  }
+
+  Future<void> _deleteSale() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      final saleId = widget.sale['id'];
+      await LPGApiService.deleteLPGSale(saleId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('Sale deleted successfully'),
+                ),
+              ],
+            ),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        
+        Navigator.pop(context, true); // Return true to indicate deletion
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Failed to delete sale: $e');
+    }
   }
 
   Widget _buildInvoiceHeader(DateTime date) {
@@ -74,12 +239,12 @@ class SaleDetailScreen extends StatelessWidget {
                     Text('Invoice', style: LPGTextStyles.heading2),
                     SizedBox(height: 4),
                     Text(
-                      sale['invoiceNumber'] ?? sale['invoice_number'] ?? 'N/A',
+                      widget.sale['invoiceNumber'] ?? widget.sale['invoice_number'] ?? 'N/A',
                       style: LPGTextStyles.body1.copyWith(color: LPGColors.textSecondary),
                     ),
                   ],
                 ),
-                _buildStatusBadge(sale['status'] ?? 'Completed'),
+                _buildStatusBadge(widget.sale['status'] ?? 'Completed'),
               ],
             ),
             SizedBox(height: 12),
@@ -438,11 +603,20 @@ class SaleDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showComingSoon(BuildContext context, String feature) {
+  void _showComingSoon(String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$feature - Coming Soon!'),
         backgroundColor: LPGColors.info,
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: LPGColors.error,
       ),
     );
   }

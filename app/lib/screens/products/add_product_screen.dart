@@ -514,8 +514,15 @@ class _AddProductScreenState extends State<AddProductScreen> {
               decoration: InputDecoration(
                 labelText: 'Product Name *',
                 hintText: 'e.g., HP Gas Cylinder',
+                helperText: 'Enter a descriptive product name',
               ),
-              validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              textCapitalization: TextCapitalization.words,
+              validator: (value) {
+                if (value?.isEmpty ?? true) return 'Product name is required';
+                if (value!.length < 3) return 'Name must be at least 3 characters';
+                if (value.length > 100) return 'Name is too long (max: 100 characters)';
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
@@ -523,26 +530,51 @@ class _AddProductScreenState extends State<AddProductScreen> {
               decoration: InputDecoration(
                 labelText: 'Brand *',
                 hintText: 'e.g., HP, Indane, Bharat Gas',
+                helperText: 'Enter the brand or manufacturer name',
               ),
-              validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              textCapitalization: TextCapitalization.words,
+              validator: (value) {
+                if (value?.isEmpty ?? true) return 'Brand is required';
+                if (value!.length < 2) return 'Brand must be at least 2 characters';
+                if (value.length > 50) return 'Brand name is too long (max: 50 characters)';
+                return null;
+              },
             ),
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _category,
-              decoration: InputDecoration(labelText: 'Category *'),
+              decoration: InputDecoration(
+                labelText: 'Category *',
+                helperText: 'Select product category',
+              ),
               items: _categories.map((cat) {
                 return DropdownMenuItem(value: cat, child: Text(cat));
               }).toList(),
               onChanged: (value) => setState(() => _category = value!),
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Category is required';
+                return null;
+              },
             ),
             SizedBox(height: 16),
             TextFormField(
               controller: _skuController,
               decoration: InputDecoration(
                 labelText: 'SKU *',
-                hintText: 'Stock Keeping Unit',
+                hintText: 'e.g., HP-15KG-001',
+                helperText: 'Stock Keeping Unit - unique identifier',
               ),
-              validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              textCapitalization: TextCapitalization.characters,
+              validator: (value) {
+                if (value?.isEmpty ?? true) return 'SKU is required';
+                if (value!.length < 3) return 'SKU must be at least 3 characters';
+                if (value.length > 50) return 'SKU is too long (max: 50 characters)';
+                // Check for valid SKU format (alphanumeric and hyphens)
+                if (!RegExp(r'^[A-Z0-9\-]+$').hasMatch(value)) {
+                  return 'SKU can only contain uppercase letters, numbers, and hyphens';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -558,10 +590,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Cylinder Specifications', style: LPGTextStyles.subtitle1),
+            SizedBox(height: 8),
+            Text(
+              'Select cylinder type and capacity',
+              style: LPGTextStyles.caption.copyWith(color: LPGColors.textSecondary),
+            ),
             SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _cylinderType,
-              decoration: InputDecoration(labelText: 'Cylinder Type *'),
+              decoration: InputDecoration(
+                labelText: 'Cylinder Type *',
+                helperText: 'Select the cylinder size category',
+              ),
               items: _cylinderTypes.map((type) {
                 return DropdownMenuItem<String>(
                   value: type['value'] as String,
@@ -576,13 +616,35 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   )['capacity'];
                 });
               },
-              validator: (value) => value == null ? 'Required' : null,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Cylinder type is required';
+                }
+                return null;
+              },
             ),
             if (_capacity != null) ...[
-              SizedBox(height: 8),
-              Text(
-                'Capacity: $_capacity kg',
-                style: LPGTextStyles.body2.copyWith(color: LPGColors.info),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: LPGColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: LPGColors.success.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 20, color: LPGColors.success),
+                    SizedBox(width: 8),
+                    Text(
+                      'Capacity: $_capacity kg',
+                      style: LPGTextStyles.body2.copyWith(
+                        color: LPGColors.success,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
@@ -605,11 +667,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
               decoration: InputDecoration(
                 labelText: 'Selling Price *',
                 prefixText: 'Rs ',
+                hintText: 'e.g., 3000',
+                helperText: 'Must be a positive number',
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
-                if (value?.isEmpty ?? true) return 'Required';
-                if (double.tryParse(value!) == null) return 'Invalid number';
+                if (value?.isEmpty ?? true) return 'Selling price is required';
+                final price = double.tryParse(value!);
+                if (price == null) return 'Please enter a valid number';
+                if (price <= 0) return 'Price must be greater than 0';
+                if (price > 1000000) return 'Price seems too high (max: 1,000,000)';
                 return null;
               },
             ),
@@ -619,11 +686,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
               decoration: InputDecoration(
                 labelText: 'Cost Price *',
                 prefixText: 'Rs ',
+                hintText: 'e.g., 2500',
+                helperText: 'Must be a positive number',
               ),
-              keyboardType: TextInputType.number,
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
               validator: (value) {
-                if (value?.isEmpty ?? true) return 'Required';
-                if (double.tryParse(value!) == null) return 'Invalid number';
+                if (value?.isEmpty ?? true) return 'Cost price is required';
+                final cost = double.tryParse(value!);
+                if (cost == null) return 'Please enter a valid number';
+                if (cost < 0) return 'Cost price cannot be negative';
+                if (cost > 1000000) return 'Cost price seems too high (max: 1,000,000)';
+                
+                // Validate cost vs selling price
+                final sellingPrice = double.tryParse(_priceController.text);
+                if (sellingPrice != null && cost > sellingPrice) {
+                  return 'Cost price should not exceed selling price';
+                }
                 return null;
               },
             ),
@@ -634,11 +712,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 decoration: InputDecoration(
                   labelText: 'Deposit Amount',
                   prefixText: 'Rs ',
+                  hintText: 'e.g., 1500',
+                  helperText: 'Optional - Amount for cylinder deposit',
                 ),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value?.isEmpty ?? true) return null; // Optional field
-                  if (double.tryParse(value!) == null) return 'Invalid number';
+                  final deposit = double.tryParse(value!);
+                  if (deposit == null) return 'Please enter a valid number';
+                  if (deposit < 0) return 'Deposit amount cannot be negative';
+                  if (deposit > 100000) return 'Deposit amount seems too high (max: 100,000)';
                   return null;
                 },
               ),
@@ -648,11 +731,16 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 decoration: InputDecoration(
                   labelText: 'Refill Price',
                   prefixText: 'Rs ',
+                  hintText: 'e.g., 800',
+                  helperText: 'Optional - Price for refilling cylinder',
                 ),
-                keyboardType: TextInputType.number,
+                keyboardType: TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
                   if (value?.isEmpty ?? true) return null; // Optional field
-                  if (double.tryParse(value!) == null) return 'Invalid number';
+                  final refill = double.tryParse(value!);
+                  if (refill == null) return 'Please enter a valid number';
+                  if (refill < 0) return 'Refill price cannot be negative';
+                  if (refill > 100000) return 'Refill price seems too high (max: 100,000)';
                   return null;
                 },
               ),
@@ -674,11 +762,18 @@ class _AddProductScreenState extends State<AddProductScreen> {
             SizedBox(height: 16),
             TextFormField(
               controller: _stockController,
-              decoration: InputDecoration(labelText: 'Initial Stock *'),
+              decoration: InputDecoration(
+                labelText: 'Initial Stock *',
+                hintText: 'e.g., 50',
+                helperText: 'Number of units in stock',
+              ),
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value?.isEmpty ?? true) return 'Required';
-                if (int.tryParse(value!) == null) return 'Invalid number';
+                if (value?.isEmpty ?? true) return 'Initial stock is required';
+                final stock = int.tryParse(value!);
+                if (stock == null) return 'Please enter a valid whole number';
+                if (stock < 0) return 'Stock cannot be negative';
+                if (stock > 10000) return 'Stock seems too high (max: 10,000)';
                 return null;
               },
             ),
@@ -687,12 +782,22 @@ class _AddProductScreenState extends State<AddProductScreen> {
               controller: _minStockController,
               decoration: InputDecoration(
                 labelText: 'Minimum Stock Level *',
-                hintText: 'Alert when stock falls below this',
+                hintText: 'e.g., 10',
+                helperText: 'Alert when stock falls below this level',
               ),
               keyboardType: TextInputType.number,
               validator: (value) {
-                if (value?.isEmpty ?? true) return 'Required';
-                if (int.tryParse(value!) == null) return 'Invalid number';
+                if (value?.isEmpty ?? true) return 'Minimum stock level is required';
+                final minStock = int.tryParse(value!);
+                if (minStock == null) return 'Please enter a valid whole number';
+                if (minStock < 0) return 'Minimum stock cannot be negative';
+                if (minStock > 1000) return 'Minimum stock seems too high (max: 1,000)';
+                
+                // Validate min stock vs current stock
+                final currentStock = int.tryParse(_stockController.text);
+                if (currentStock != null && minStock > currentStock) {
+                  return 'Minimum stock should not exceed current stock';
+                }
                 return null;
               },
             ),
@@ -710,6 +815,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Cylinder Inventory', style: LPGTextStyles.subtitle1),
+            SizedBox(height: 8),
+            Text(
+              'Track cylinder states for inventory management',
+              style: LPGTextStyles.caption.copyWith(color: LPGColors.textSecondary),
+            ),
             SizedBox(height: 16),
             Row(
               children: [
@@ -718,12 +828,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     controller: _emptyController,
                     decoration: InputDecoration(
                       labelText: 'Empty Cylinders',
+                      hintText: '0',
                       prefixIcon: Icon(Icons.propane_tank, color: LPGColors.cylinderEmpty),
+                      helperText: 'Number of empty units',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value?.isEmpty ?? true) return 'Required';
-                      if (int.tryParse(value!) == null) return 'Invalid';
+                      final empty = int.tryParse(value!);
+                      if (empty == null) return 'Invalid number';
+                      if (empty < 0) return 'Cannot be negative';
+                      if (empty > 10000) return 'Too high (max: 10,000)';
                       return null;
                     },
                   ),
@@ -734,17 +849,43 @@ class _AddProductScreenState extends State<AddProductScreen> {
                     controller: _filledController,
                     decoration: InputDecoration(
                       labelText: 'Filled Cylinders',
+                      hintText: '0',
                       prefixIcon: Icon(Icons.propane_tank, color: LPGColors.cylinderFilled),
+                      helperText: 'Number of filled units',
                     ),
                     keyboardType: TextInputType.number,
                     validator: (value) {
                       if (value?.isEmpty ?? true) return 'Required';
-                      if (int.tryParse(value!) == null) return 'Invalid';
+                      final filled = int.tryParse(value!);
+                      if (filled == null) return 'Invalid number';
+                      if (filled < 0) return 'Cannot be negative';
+                      if (filled > 10000) return 'Too high (max: 10,000)';
                       return null;
                     },
                   ),
                 ),
               ],
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: LPGColors.info.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: LPGColors.info.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, size: 16, color: LPGColors.info),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Total stock will be calculated as: Empty + Filled',
+                      style: LPGTextStyles.caption.copyWith(color: LPGColors.info),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -765,9 +906,19 @@ class _AddProductScreenState extends State<AddProductScreen> {
               controller: _descriptionController,
               decoration: InputDecoration(
                 labelText: 'Description',
-                hintText: 'Product details, features, etc.',
+                hintText: 'Product details, features, specifications, etc.',
+                helperText: 'Optional - Add any additional product information',
+                alignLabelWithHint: true,
               ),
-              maxLines: 3,
+              maxLines: 4,
+              maxLength: 500,
+              textCapitalization: TextCapitalization.sentences,
+              validator: (value) {
+                if (value != null && value.length > 500) {
+                  return 'Description is too long (max: 500 characters)';
+                }
+                return null;
+              },
             ),
           ],
         ),
@@ -779,11 +930,33 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return SizedBox(
       width: double.infinity,
       height: 50,
-      child: ElevatedButton(
+      child: ElevatedButton.icon(
         onPressed: _isLoading ? null : _saveProduct,
-        child: _isLoading
-            ? CircularProgressIndicator(color: Colors.white)
-            : Text('Add Product'),
+        icon: _isLoading
+            ? SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Icon(isEditMode ? Icons.save : Icons.add),
+        label: Text(
+          _isLoading 
+              ? 'Saving...' 
+              : isEditMode 
+                  ? 'Update Product' 
+                  : 'Add Product',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: LPGColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       ),
     );
   }

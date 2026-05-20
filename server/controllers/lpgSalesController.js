@@ -251,8 +251,63 @@ const getSalesReport = async (req, res, next) => {
   }
 };
 
+// @desc    Delete LPG sale
+// @route   DELETE /api/sales/:id
+// @access  Private
+const deleteLPGSale = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    const { id } = req.params;
+    
+    // First, verify the sale exists and belongs to the user
+    const { data: sale, error: fetchError } = await supabase
+      .from('lpg_sales')
+      .select('id, user_id, invoice_number')
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .single();
+    
+    if (fetchError || !sale) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sale not found or you do not have permission to delete it'
+      });
+    }
+    
+    // Delete sale items first (foreign key constraint)
+    const { error: itemsDeleteError } = await supabase
+      .from('sale_items')
+      .delete()
+      .eq('sale_id', id);
+    
+    if (itemsDeleteError) throw itemsDeleteError;
+    
+    // Delete the sale
+    const { error: saleDeleteError } = await supabase
+      .from('lpg_sales')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', req.user.id);
+    
+    if (saleDeleteError) throw saleDeleteError;
+    
+    res.json({
+      success: true,
+      message: `Sale ${sale.invoice_number} deleted successfully`
+    });
+    
+  } catch (error) {
+    console.error('Sale deletion error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to delete sale'
+    });
+  }
+};
+
 module.exports = {
   createLPGSale,
   getLPGSales,
-  getSalesReport
+  getSalesReport,
+  deleteLPGSale
 };

@@ -564,6 +564,14 @@ class LPGApiService {
     return data['data'];
   }
 
+  static Future<void> deleteLPGSale(String id) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/sales/$id'),
+      headers: await _getHeaders(),
+    );
+    _handleResponse(response);
+  }
+
   // --- Cylinder APIs ---
 
   static Future<Map<String, dynamic>> registerCylinder(Map<String, dynamic> cylinderData) async {
