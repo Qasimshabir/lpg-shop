@@ -367,11 +367,19 @@ const deleteLPGProduct = async (req, res, next) => {
 const updateCylinderState = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
-    const { quantity, operation = 'add' } = req.body;
+    const { state, quantity, operation = 'add' } = req.body;
+
+    // Validate state
+    if (!['empty', 'filled', 'sold'].includes(state)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid state. Must be empty, filled, or sold'
+      });
+    }
 
     const { data: product, error: fetchError } = await supabase
       .from('lpg_products')
-      .select('stock_quantity')
+      .select('stock_quantity, cylinder_states')
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .single();
@@ -383,16 +391,27 @@ const updateCylinderState = async (req, res, next) => {
       });
     }
 
-    let newQuantity = product.stock_quantity;
+    // Get current cylinder states or initialize
+    const cylinderStates = product.cylinder_states || { empty: 0, filled: 0, sold: 0 };
+    
+    // Update the specific state
     if (operation === 'add') {
-      newQuantity += quantity;
+      cylinderStates[state] = (cylinderStates[state] || 0) + quantity;
     } else if (operation === 'subtract') {
-      newQuantity = Math.max(0, newQuantity - quantity);
+      cylinderStates[state] = Math.max(0, (cylinderStates[state] || 0) - quantity);
+    } else if (operation === 'set') {
+      cylinderStates[state] = quantity;
     }
+
+    // Calculate total stock (empty + filled)
+    const newStockQuantity = (cylinderStates.empty || 0) + (cylinderStates.filled || 0);
 
     const { data: updated, error } = await supabase
       .from('lpg_products')
-      .update({ stock_quantity: newQuantity })
+      .update({ 
+        stock_quantity: newStockQuantity,
+        cylinder_states: cylinderStates
+      })
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .select()
@@ -402,7 +421,7 @@ const updateCylinderState = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Stock updated successfully',
+      message: 'Cylinder state updated successfully',
       data: updated
     });
   } catch (error) {
@@ -420,7 +439,7 @@ const exchangeCylinder = async (req, res, next) => {
 
     const { data: product, error: fetchError } = await supabase
       .from('lpg_products')
-      .select('stock_quantity')
+      .select('stock_quantity, cylinder_states')
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .single();
@@ -432,16 +451,30 @@ const exchangeCylinder = async (req, res, next) => {
       });
     }
 
-    if (product.stock_quantity < quantity) {
+    // Get current cylinder states or initialize
+    const cylinderStates = product.cylinder_states || { empty: 0, filled: 0, sold: 0 };
+    
+    // Check if we have enough empty cylinders to exchange
+    if ((cylinderStates.empty || 0) < quantity) {
       return res.status(400).json({
         success: false,
-        message: 'Insufficient stock for exchange'
+        message: `Insufficient empty cylinders for exchange. Available: ${cylinderStates.empty || 0}`
       });
     }
 
+    // Exchange: decrease empty, increase filled
+    cylinderStates.empty = (cylinderStates.empty || 0) - quantity;
+    cylinderStates.filled = (cylinderStates.filled || 0) + quantity;
+
+    // Calculate total stock (empty + filled)
+    const newStockQuantity = (cylinderStates.empty || 0) + (cylinderStates.filled || 0);
+
     const { data: updated, error } = await supabase
       .from('lpg_products')
-      .update({ stock_quantity: product.stock_quantity - quantity })
+      .update({ 
+        stock_quantity: newStockQuantity,
+        cylinder_states: cylinderStates
+      })
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .select()
