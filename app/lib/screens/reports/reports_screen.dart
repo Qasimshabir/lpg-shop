@@ -1,10 +1,16 @@
 ﻿import 'package:flutter/material.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../../services/lpg_api_service.dart';
 import '../../lpg_theme.dart';
 import '../../widgets/app_drawer.dart';
+
+// Platform-specific imports
+import 'dart:io' show Platform, File, Directory;
+import 'package:path_provider/path_provider.dart';
+// Web-specific import (only used when kIsWeb is true)
+import 'dart:html' as html;
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({Key? key}) : super(key: key);
@@ -615,7 +621,48 @@ class _ReportsScreenState extends State<ReportsScreen> {
       buffer.writeln('End of Report');
       buffer.writeln('=' * 50);
 
-      // Get appropriate directory based on platform
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final fileName = 'report_${timestamp}.txt';
+      
+      // For web platform, trigger browser download
+      if (kIsWeb) {
+        _downloadReportWeb(buffer.toString(), fileName);
+      } else {
+        await _saveReportMobile(buffer.toString(), fileName);
+      }
+    } catch (e) {
+      _showError('Failed to export report: $e');
+    }
+  }
+
+  // Web-specific download
+  void _downloadReportWeb(String content, String fileName) {
+    try {
+      final bytes = utf8.encode(content);
+      final blob = html.Blob([bytes]);
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      html.Url.revokeObjectUrl(url);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Report downloaded successfully as $fileName'),
+            backgroundColor: LPGColors.success,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      _showError('Failed to download report: $e');
+    }
+  }
+
+  // Mobile/Desktop-specific save
+  Future<void> _saveReportMobile(String content, String fileName) async {
+    try {
       Directory? directory;
       try {
         if (Platform.isAndroid) {
@@ -627,14 +674,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         directory = await getApplicationDocumentsDirectory();
       }
       
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final fileName = 'report_${timestamp}.txt';
       final file = File('${directory!.path}/$fileName');
+      await file.writeAsString(content);
 
-      // Write to file
-      await file.writeAsString(buffer.toString());
-
-      // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -650,7 +692,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         );
       }
     } catch (e) {
-      _showError('Failed to export report: $e');
+      _showError('Failed to save report: $e');
     }
   }
 
