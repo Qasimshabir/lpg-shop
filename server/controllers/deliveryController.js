@@ -344,14 +344,233 @@ const getPendingDeliveries = async (req, res, next) => {
   }
 };
 
+// @desc    Delete delivery personnel
+// @route   DELETE /api/delivery/personnel/:id
+// @access  Private
+const deleteDeliveryPersonnel = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    // Check if personnel is assigned to any active routes
+    const { data: activeRoutes, error: checkError } = await supabase
+      .from('delivery_routes')
+      .select('id')
+      .eq('personnel_id', req.params.id)
+      .in('status', ['planned', 'in_progress']);
+
+    if (checkError) throw checkError;
+
+    if (activeRoutes && activeRoutes.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete personnel assigned to active routes. Please complete or reassign their routes first.'
+      });
+    }
+
+    // Delete personnel
+    const { error } = await supabase
+      .from('delivery_personnel')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Delivery personnel deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update delivery route
+// @route   PUT /api/delivery/routes/:id
+// @access  Private
+const updateDeliveryRoute = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    const updateData = {};
+    if (req.body.date !== undefined) updateData.date = req.body.date;
+    if (req.body.personnel_id !== undefined) {
+      // If changing personnel, update availability
+      const { data: oldRoute } = await supabase
+        .from('delivery_routes')
+        .select('personnel_id')
+        .eq('id', req.params.id)
+        .single();
+
+      if (oldRoute && oldRoute.personnel_id !== req.body.personnel_id) {
+        // Mark old personnel as available
+        await supabase
+          .from('delivery_personnel')
+          .update({ is_available: true })
+          .eq('id', oldRoute.personnel_id);
+
+        // Mark new personnel as busy
+        await supabase
+          .from('delivery_personnel')
+          .update({ is_available: false })
+          .eq('id', req.body.personnel_id);
+      }
+      
+      updateData.personnel_id = req.body.personnel_id;
+    }
+    if (req.body.status !== undefined) updateData.status = req.body.status;
+
+    const { data: route, error } = await supabase
+      .from('delivery_routes')
+      .update(updateData)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!route) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery route not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Delivery route updated successfully',
+      data: route
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete delivery route
+// @route   DELETE /api/delivery/routes/:id
+// @access  Private
+const deleteDeliveryRoute = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    // Get route to find personnel_id and check status
+    const { data: route, error: fetchError } = await supabase
+      .from('delivery_routes')
+      .select('personnel_id, status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (!route) {
+      return res.status(404).json({
+        success: false,
+        message: 'Delivery route not found'
+      });
+    }
+
+    // Warn if deleting in-progress route
+    if (route.status === 'in_progress') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete route in progress. Please complete it first.'
+      });
+    }
+
+    // Get sales associated with this route to reset their delivery status
+    const { data: sales } = await supabase
+      .from('lpg_sales')
+      .select('id')
+      .eq('delivery_status', 'assigned');
+
+    // Reset delivery status for associated sales
+    if (sales && sales.length > 0) {
+      await supabase
+        .from('lpg_sales')
+        .update({ delivery_status: 'pending' })
+        .in('id', sales.map(s => s.id));
+    }
+
+    // Mark personnel as available again
+    if (route.personnel_id) {
+      await supabase
+        .from('delivery_personnel')
+        .update({ is_available: true })
+        .eq('id', route.personnel_id);
+    }
+
+    // Delete route
+    const { error } = await supabase
+      .from('delivery_routes')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    res.json({
+      success: true,
+      message: 'Delivery route deleted successfully. Associated deliveries reset to pending.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update delivery status
+// @route   PUT /api/delivery/:saleId/status
+// @access  Private
+const updateDeliveryStatus = async (req, res, next) => {
+  try {
+    const supabase = getSupabaseClient();
+    
+    const { delivery_status } = req.body;
+    
+    if (!['pending', 'assigned', 'in_transit', 'delivered', 'failed'].includes(delivery_status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid delivery status'
+      });
+    }
+
+    const { data: sale, error } = await supabase
+      .from('lpg_sales')
+      .update({ delivery_status })
+      .eq('id', req.params.saleId)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    if (!sale) {
+      return res.status(404).json({
+        success: false,
+        message: 'Sale not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Delivery status updated successfully',
+      data: sale
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   addDeliveryPersonnel,
   getDeliveryPersonnel,
   updateDeliveryPersonnel,
+  deleteDeliveryPersonnel,
   assignDeliveries,
   getDeliveryRoutes,
+  updateDeliveryRoute,
+  deleteDeliveryRoute,
   startDeliveryRoute,
   completeDeliveryRoute,
   updateDeliveryProof,
+  updateDeliveryStatus,
   getPendingDeliveries
 };
