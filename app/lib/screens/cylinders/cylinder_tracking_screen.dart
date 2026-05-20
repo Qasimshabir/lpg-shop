@@ -14,7 +14,6 @@ class CylinderTrackingScreen extends StatefulWidget {
 
 class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
   bool _isLoading = true;
-  List<dynamic> _cylinderSummary = [];
   List<dynamic> _trackedCylinders = [];
   String _selectedFilter = 'all';
 
@@ -25,35 +24,21 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
   }
 
   Future<void> _loadData() async {
-    await Future.wait([
-      _loadCylinders(),
-      _loadTrackedCylinders(),
-    ]);
-  }
-
-  Future<void> _loadCylinders() async {
-    try {
-      setState(() => _isLoading = true);
-      final summary = await LPGApiService.getCylinderSummary();
-      setState(() {
-        _cylinderSummary = summary;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      _showError('Failed to load cylinders: $e');
-    }
+    await _loadTrackedCylinders();
   }
 
   Future<void> _loadTrackedCylinders() async {
     try {
+      setState(() => _isLoading = true);
       final cylinders = await LPGApiService.getCylinders();
       if (mounted) {
         setState(() {
           _trackedCylinders = cylinders;
+          _isLoading = false;
         });
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       print('Failed to load tracked cylinders: $e');
     }
   }
@@ -87,17 +72,11 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
           ? Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: _cylinderSummary.isEmpty && _trackedCylinders.isEmpty
+              child: _trackedCylinders.isEmpty
                   ? _buildEmptyState()
                   : ListView(
                       padding: EdgeInsets.all(16),
                       children: [
-                        if (_cylinderSummary.isNotEmpty) ...[
-                          _buildOverviewCard(),
-                          SizedBox(height: 16),
-                          ..._cylinderSummary.map((data) => _buildCylinderTypeCard(data)),
-                          SizedBox(height: 24),
-                        ],
                         _buildTrackedCylindersSection(),
                       ],
                     ),
@@ -106,199 +85,6 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
         onPressed: _showAddCylinderDialog,
         icon: Icon(Icons.add),
         label: Text('Add to Track'),
-      ),
-    );
-  }
-
-  Widget _buildOverviewCard() {
-    int totalEmpty = 0;
-    int totalFilled = 0;
-    int totalSold = 0;
-
-    for (var data in _cylinderSummary) {
-      totalEmpty += (data['totalEmpty'] ?? 0) as int;
-      totalFilled += (data['totalFilled'] ?? 0) as int;
-      totalSold += (data['totalSold'] ?? 0) as int;
-    }
-
-    int total = totalEmpty + totalFilled + totalSold;
-
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Total Inventory', style: LPGTextStyles.heading3),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatBox('Empty', totalEmpty, LPGColors.cylinderEmpty),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatBox('Filled', totalFilled, LPGColors.cylinderFilled),
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: _buildStatBox('Sold', totalSold, LPGColors.cylinderSold),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: total > 0 ? totalFilled / total : 0,
-              backgroundColor: LPGColors.cylinderEmpty,
-              valueColor: AlwaysStoppedAnimation<Color>(LPGColors.cylinderFilled),
-              minHeight: 10,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Available: $totalFilled / $total cylinders',
-              style: LPGTextStyles.body2.copyWith(color: LPGColors.textTertiary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatBox(String label, int count, Color color) {
-    // Use a darker color for text if the background color is too light
-    Color textColor = color;
-    if (label == 'Empty') {
-      // For empty cylinders, use a darker gray for better visibility
-      textColor = LPGColors.textSecondary;
-    }
-    
-    return Container(
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            count.toString(),
-            style: LPGTextStyles.heading2.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(label, style: LPGTextStyles.caption),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCylinderTypeCard(Map<String, dynamic> data) {
-    final cylinderType = data['_id'] ?? 'Unknown';
-    final totalEmpty = data['totalEmpty'] ?? 0;
-    final totalFilled = data['totalFilled'] ?? 0;
-    final totalSold = data['totalSold'] ?? 0;
-    final total = totalEmpty + totalFilled + totalSold;
-
-    return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: LPGColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.propane_tank, color: LPGColors.primary, size: 28),
-                ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$cylinderType Cylinders',
-                        style: LPGTextStyles.subtitle1,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Total: $total units',
-                        style: LPGTextStyles.caption,
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '$totalFilled',
-                  style: LPGTextStyles.heading2.copyWith(
-                    color: LPGColors.cylinderFilled,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMiniStat('Empty', totalEmpty, LPGColors.cylinderEmpty),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: _buildMiniStat('Filled', totalFilled, LPGColors.cylinderFilled),
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: _buildMiniStat('Sold', totalSold, LPGColors.cylinderSold),
-                ),
-              ],
-            ),
-            SizedBox(height: 12),
-            LinearProgressIndicator(
-              value: total > 0 ? totalFilled / total : 0,
-              backgroundColor: LPGColors.cylinderEmpty,
-              valueColor: AlwaysStoppedAnimation<Color>(LPGColors.cylinderFilled),
-              minHeight: 6,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(String label, int count, Color color) {
-    // Use a darker color for text if the background color is too light
-    Color textColor = color;
-    if (label == 'Empty') {
-      // For empty cylinders, use a darker gray for better visibility
-      textColor = LPGColors.textSecondary;
-    }
-    
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            count.toString(),
-            style: LPGTextStyles.subtitle1.copyWith(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(label, style: LPGTextStyles.caption),
-        ],
       ),
     );
   }

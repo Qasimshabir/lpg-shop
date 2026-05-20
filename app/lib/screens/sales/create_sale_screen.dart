@@ -518,7 +518,9 @@ class _AddToCartDialog extends StatefulWidget {
 
 class _AddToCartDialogState extends State<_AddToCartDialog> {
   final _quantityController = TextEditingController(text: '1');
+  final _formKey = GlobalKey<FormState>();
   late double _unitPrice;
+  String? _quantityError;
 
   @override
   void initState() {
@@ -526,54 +528,174 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
     _unitPrice = widget.product.price;
   }
 
+  int get _availableStock {
+    if (widget.product.productType.toLowerCase() == 'cylinder') {
+      return widget.product.availableCylinders;
+    }
+    return widget.product.stockQuantity;
+  }
+
   @override
   Widget build(BuildContext context) {
     final quantity = int.tryParse(_quantityController.text) ?? 1;
     final subtotal = quantity * _unitPrice;
+    final hasStock = _availableStock > 0;
+    final exceedsStock = quantity > _availableStock;
 
     return AlertDialog(
       title: Text('Add to Cart'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(widget.product.displayName, style: LPGTextStyles.subtitle1),
-          SizedBox(height: 16),
-          TextFormField(
-            controller: _quantityController,
-            decoration: InputDecoration(labelText: 'Quantity'),
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(() {}),
-          ),
-          SizedBox(height: 16),
-          TextFormField(
-            initialValue: _unitPrice.toString(),
-            decoration: InputDecoration(labelText: 'Unit Price', prefixText: 'Rs '),
-            keyboardType: TextInputType.number,
-            onChanged: (v) => setState(() => _unitPrice = double.tryParse(v) ?? widget.product.price),
-          ),
-          SizedBox(height: 16),
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: LPGColors.success.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.product.displayName, style: LPGTextStyles.subtitle1),
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: hasStock 
+                    ? LPGColors.info.withOpacity(0.1) 
+                    : LPGColors.error.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: hasStock 
+                      ? LPGColors.info.withOpacity(0.3) 
+                      : LPGColors.error.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hasStock ? Icons.inventory : Icons.warning,
+                    size: 16,
+                    color: hasStock ? LPGColors.info : LPGColors.error,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    'Available Stock: $_availableStock',
+                    style: LPGTextStyles.caption.copyWith(
+                      color: hasStock ? LPGColors.info : LPGColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Subtotal:', style: LPGTextStyles.body1),
-                Text('Rs${subtotal.toStringAsFixed(2)}', style: LPGTextStyles.subtitle1.copyWith(color: LPGColors.success)),
-              ],
+            SizedBox(height: 16),
+            TextFormField(
+              controller: _quantityController,
+              decoration: InputDecoration(
+                labelText: 'Quantity',
+                helperText: 'Max: $_availableStock',
+                errorText: _quantityError,
+                suffixIcon: _quantityError != null 
+                    ? Icon(Icons.error, color: LPGColors.error)
+                    : null,
+              ),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter quantity';
+                }
+                final qty = int.tryParse(value);
+                if (qty == null || qty <= 0) {
+                  return 'Please enter a valid quantity';
+                }
+                if (qty > _availableStock) {
+                  return 'Exceeds available stock ($_availableStock)';
+                }
+                return null;
+              },
+              onChanged: (value) {
+                setState(() {
+                  final qty = int.tryParse(value) ?? 0;
+                  if (qty > _availableStock) {
+                    _quantityError = 'Exceeds available stock';
+                  } else {
+                    _quantityError = null;
+                  }
+                });
+              },
             ),
-          ),
-        ],
+            SizedBox(height: 16),
+            TextFormField(
+              initialValue: _unitPrice.toString(),
+              decoration: InputDecoration(labelText: 'Unit Price', prefixText: 'Rs '),
+              keyboardType: TextInputType.number,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter unit price';
+                }
+                final price = double.tryParse(value);
+                if (price == null || price <= 0) {
+                  return 'Please enter a valid price';
+                }
+                return null;
+              },
+              onChanged: (v) => setState(() => _unitPrice = double.tryParse(v) ?? widget.product.price),
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: exceedsStock 
+                    ? LPGColors.error.withOpacity(0.1)
+                    : LPGColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: exceedsStock 
+                      ? LPGColors.error.withOpacity(0.3)
+                      : LPGColors.success.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Subtotal:', style: LPGTextStyles.body1),
+                  Text(
+                    'Rs${subtotal.toStringAsFixed(2)}', 
+                    style: LPGTextStyles.subtitle1.copyWith(
+                      color: exceedsStock ? LPGColors.error : LPGColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (exceedsStock) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: LPGColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error, size: 16, color: LPGColors.error),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Quantity exceeds available stock!',
+                        style: LPGTextStyles.caption.copyWith(
+                          color: LPGColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
         ElevatedButton(
-          onPressed: () {
-            if (quantity > 0) {
+          onPressed: exceedsStock || !hasStock ? null : () {
+            if (_formKey.currentState!.validate()) {
               Navigator.pop(context, {
                 'product': widget.product.id,
                 'productName': widget.product.displayName,

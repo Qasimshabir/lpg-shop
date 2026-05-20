@@ -16,6 +16,45 @@ const createLPGSale = async (req, res, next) => {
       });
     }
     
+    // Validate stock availability for all items before processing
+    const stockErrors = [];
+    for (let item of items) {
+      const { data: product } = await supabase
+        .from('lpg_products')
+        .select('id, name, stock_quantity, cylinder_states, product_type')
+        .eq('id', item.product_id)
+        .single();
+      
+      if (!product) {
+        stockErrors.push(`Product with ID ${item.product_id} not found`);
+        continue;
+      }
+      
+      let availableStock = 0;
+      if (product.product_type === 'cylinder' && product.cylinder_states) {
+        // For cylinders, check filled cylinders
+        availableStock = product.cylinder_states.filled || 0;
+      } else {
+        // For accessories, check stock_quantity
+        availableStock = product.stock_quantity || 0;
+      }
+      
+      if (item.quantity > availableStock) {
+        stockErrors.push(
+          `Insufficient stock for "${product.name}". Requested: ${item.quantity}, Available: ${availableStock}`
+        );
+      }
+    }
+    
+    // If there are stock errors, return them
+    if (stockErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock validation failed',
+        errors: stockErrors
+      });
+    }
+    
     // Calculate total amount
     let totalAmount = 0;
     for (let item of items) {
@@ -92,7 +131,7 @@ const createLPGSale = async (req, res, next) => {
           // For non-cylinder products, just update stock
           await supabase
             .from('lpg_products')
-            .update({ stock_quantity: product.stock_quantity - item.quantity })
+            .update({ stock_quantity: Math.max(0, product.stock_quantity - item.quantity) })
             .eq('id', item.product_id);
         }
       }
