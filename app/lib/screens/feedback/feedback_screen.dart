@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/feedback.dart' as fb;
 import '../../services/api_service.dart';
+import '../../widgets/app_drawer.dart';
 import 'my_feedbacks_screen.dart';
 
 class FeedbackScreen extends StatefulWidget {
@@ -89,6 +90,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ),
         ],
       ),
+      drawer: AppDrawer(currentRoute: '/feedback'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

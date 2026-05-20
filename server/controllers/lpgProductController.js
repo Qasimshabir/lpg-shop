@@ -102,20 +102,43 @@ const createLPGProduct = async (req, res, next) => {
       name: req.body.name,
       brand_id: brandId,
       category: req.body.category,
+      product_type: req.body.productType || 'cylinder',
+      cylinder_type: req.body.cylinderType || null,
+      capacity: req.body.capacity || null,
+      pressure_rating: req.body.pressureRating || null,
       weight: req.body.weight || req.body.capacity || null,
       weight_unit: req.body.weight_unit || 'kg',
+      unit: req.body.unit || 'Piece',
       price: req.body.price,
+      cost_price: req.body.costPrice || 0,
+      deposit_amount: req.body.depositAmount || 0,
+      refill_price: req.body.refillPrice || 0,
       stock_quantity: req.body.stock_quantity || req.body.stock || 0,
-      reorder_level: req.body.reorder_level || req.body.min_stock || 10,
+      reorder_level: req.body.reorder_level || req.body.minStock || 10,
+      min_stock: req.body.minStock || 10,
+      max_stock: req.body.maxStock || 100,
       description: req.body.description || null,
       image_url: req.body.image_url || null,
       sku: req.body.sku || null,
-      is_active: req.body.is_active !== undefined ? req.body.is_active : true
+      barcode: req.body.barcode || null,
+      discount: req.body.discount || 0,
+      notes: req.body.notes || null,
+      tags: req.body.tags || [],
+      cylinder_states: req.body.cylinderStates || null,
+      inspection_required: req.body.inspectionRequired || false,
+      inspection_interval: req.body.inspectionInterval || 60,
+      last_inspection_date: req.body.lastInspectionDate || null,
+      next_inspection_due: req.body.nextInspectionDue || null,
+      certification_number: req.body.certificationNumber || null,
+      is_active: req.body.isActive !== undefined ? req.body.isActive : true
     };
 
     // Handle cylinder states if provided
-    if (req.body.cylinder_states && req.body.cylinder_states.filled) {
-      productData.stock_quantity = req.body.cylinder_states.filled;
+    if (req.body.cylinderStates) {
+      productData.cylinder_states = req.body.cylinderStates;
+      if (req.body.cylinderStates.filled) {
+        productData.stock_quantity = req.body.cylinderStates.filled;
+      }
     }
 
     // Handle image upload to Supabase Storage
@@ -191,13 +214,35 @@ const updateLPGProduct = async (req, res, next) => {
     if (req.body.name !== undefined) updateData.name = req.body.name;
     if (req.body.brand_id !== undefined) updateData.brand_id = req.body.brand_id;
     if (req.body.category !== undefined) updateData.category = req.body.category;
+    if (req.body.productType !== undefined) updateData.product_type = req.body.productType;
+    if (req.body.cylinderType !== undefined) updateData.cylinder_type = req.body.cylinderType;
+    if (req.body.capacity !== undefined) updateData.capacity = req.body.capacity;
+    if (req.body.pressureRating !== undefined) updateData.pressure_rating = req.body.pressureRating;
     if (req.body.weight !== undefined) updateData.weight = req.body.weight;
     if (req.body.weight_unit !== undefined) updateData.weight_unit = req.body.weight_unit;
+    if (req.body.unit !== undefined) updateData.unit = req.body.unit;
     if (req.body.price !== undefined) updateData.price = req.body.price;
+    if (req.body.costPrice !== undefined) updateData.cost_price = req.body.costPrice;
+    if (req.body.depositAmount !== undefined) updateData.deposit_amount = req.body.depositAmount;
+    if (req.body.refillPrice !== undefined) updateData.refill_price = req.body.refillPrice;
     if (req.body.stock_quantity !== undefined) updateData.stock_quantity = req.body.stock_quantity;
+    if (req.body.stock !== undefined) updateData.stock_quantity = req.body.stock;
     if (req.body.reorder_level !== undefined) updateData.reorder_level = req.body.reorder_level;
+    if (req.body.minStock !== undefined) updateData.min_stock = req.body.minStock;
+    if (req.body.maxStock !== undefined) updateData.max_stock = req.body.maxStock;
     if (req.body.description !== undefined) updateData.description = req.body.description;
     if (req.body.sku !== undefined) updateData.sku = req.body.sku;
+    if (req.body.barcode !== undefined) updateData.barcode = req.body.barcode;
+    if (req.body.discount !== undefined) updateData.discount = req.body.discount;
+    if (req.body.notes !== undefined) updateData.notes = req.body.notes;
+    if (req.body.tags !== undefined) updateData.tags = req.body.tags;
+    if (req.body.cylinderStates !== undefined) updateData.cylinder_states = req.body.cylinderStates;
+    if (req.body.inspectionRequired !== undefined) updateData.inspection_required = req.body.inspectionRequired;
+    if (req.body.inspectionInterval !== undefined) updateData.inspection_interval = req.body.inspectionInterval;
+    if (req.body.lastInspectionDate !== undefined) updateData.last_inspection_date = req.body.lastInspectionDate;
+    if (req.body.nextInspectionDue !== undefined) updateData.next_inspection_due = req.body.nextInspectionDue;
+    if (req.body.certificationNumber !== undefined) updateData.certification_number = req.body.certificationNumber;
+    if (req.body.isActive !== undefined) updateData.is_active = req.body.isActive;
     if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
 
     // Handle image upload to Supabase Storage
@@ -486,29 +531,44 @@ const getCylinderSummary = async (req, res, next) => {
     
     const { data: products, error } = await supabase
       .from('lpg_products')
-      .select('category, weight, stock_quantity')
+      .select('category, weight, capacity, cylinder_type, stock_quantity, cylinder_states, product_type')
       .eq('user_id', req.user.id)
       .eq('is_active', true)
-      .ilike('category', '%cylinder%');
+      .or('product_type.eq.cylinder,category.ilike.%cylinder%');
 
     if (error) throw error;
 
     const summary = products.reduce((acc, product) => {
-      const key = `${product.weight}kg`;
+      // Determine the cylinder type key
+      let key = product.cylinder_type || `${product.capacity || product.weight || 'Unknown'}kg`;
+      
       if (!acc[key]) {
         acc[key] = {
           _id: key,
           type: key,
           totalEmpty: 0,
-          totalFilled: product.stock_quantity || 0,
+          totalFilled: 0,
           totalSold: 0,
           totalStock: 0,
           products: 0
         };
+      }
+      
+      // Parse cylinder_states if it exists
+      if (product.cylinder_states) {
+        const states = typeof product.cylinder_states === 'string' 
+          ? JSON.parse(product.cylinder_states) 
+          : product.cylinder_states;
+        
+        acc[key].totalEmpty += states.empty || 0;
+        acc[key].totalFilled += states.filled || 0;
+        acc[key].totalSold += states.sold || 0;
       } else {
+        // Fallback to stock_quantity if cylinder_states not available
         acc[key].totalFilled += product.stock_quantity || 0;
       }
-      acc[key].totalStock += product.stock_quantity || 0;
+      
+      acc[key].totalStock = acc[key].totalEmpty + acc[key].totalFilled + acc[key].totalSold;
       acc[key].products += 1;
       return acc;
     }, {});

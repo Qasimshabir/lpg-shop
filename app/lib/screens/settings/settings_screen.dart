@@ -198,7 +198,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLanguageDialog() {
-    final languages = ['English', 'Hindi', 'Spanish', 'French'];
+    final languages = [
+      {'code': 'English', 'name': 'English', 'native': 'English'},
+      {'code': 'Hindi', 'name': 'Hindi', 'native': 'हिन्दी'},
+      {'code': 'Urdu', 'name': 'Urdu', 'native': 'اردو'},
+      {'code': 'Punjabi', 'name': 'Punjabi', 'native': 'ਪੰਜਾਬੀ'},
+    ];
     
     showDialog(
       context: context,
@@ -206,20 +211,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text('Select Language'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: languages.map((lang) {
-            return RadioListTile<String>(
-              title: Text(lang),
-              value: lang,
-              groupValue: _selectedLanguage,
-              onChanged: (value) async {
-                setState(() => _selectedLanguage = value!);
-                await SettingsService.setLanguage(value!);
-                Navigator.pop(context);
-                _showSuccess('Language updated to $value');
-              },
-            );
-          }).toList(),
+          children: [
+            Text(
+              'Note: Language preference is saved but full translation is not yet implemented.',
+              style: LPGTextStyles.caption.copyWith(
+                color: LPGColors.warning,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            SizedBox(height: 16),
+            ...languages.map((lang) {
+              return RadioListTile<String>(
+                title: Text('${lang['name']} (${lang['native']})'),
+                value: lang['code']!,
+                groupValue: _selectedLanguage,
+                onChanged: (value) async {
+                  setState(() => _selectedLanguage = value!);
+                  await SettingsService.setLanguage(value!);
+                  Navigator.pop(context);
+                  _showSuccess('Language preference saved: $value');
+                },
+              );
+            }).toList(),
+          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+        ],
       ),
     );
   }
@@ -233,20 +254,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text('Select Theme'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          children: themes.map((theme) {
-            return RadioListTile<String>(
-              title: Text(theme),
-              value: theme,
-              groupValue: _selectedTheme,
-              onChanged: (value) async {
-                setState(() => _selectedTheme = value!);
-                await SettingsService.setTheme(value!);
-                Navigator.pop(context);
-                _showSuccess('Theme updated to $value. Restart app to apply changes.');
-              },
-            );
-          }).toList(),
+          children: [
+            ...themes.map((theme) {
+              return RadioListTile<String>(
+                title: Text(theme),
+                subtitle: Text(
+                  theme == 'System' ? 'Follow device theme' : '$theme mode',
+                  style: LPGTextStyles.caption,
+                ),
+                value: theme,
+                groupValue: _selectedTheme,
+                onChanged: (value) async {
+                  setState(() => _selectedTheme = value!);
+                  await SettingsService.setTheme(value!);
+                  Navigator.pop(context);
+                  
+                  // Show restart dialog
+                  _showRestartDialog();
+                },
+              );
+            }).toList(),
+          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRestartDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.info_outline, color: LPGColors.info),
+            SizedBox(width: 8),
+            Text('Restart Required'),
+          ],
+        ),
+        content: Text(
+          'Theme has been updated. Please restart the app to see the changes.\n\n'
+          'Close the app completely and reopen it.',
+          style: LPGTextStyles.body2,
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
       ),
     );
   }

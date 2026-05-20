@@ -83,12 +83,42 @@ const getLPGCustomer = async (req, res, next) => {
       .order('refill_date', { ascending: false })
       .limit(10);
 
+    // Get sales for this customer to calculate statistics
+    const { data: sales } = await supabase
+      .from('lpg_sales')
+      .select('total_amount')
+      .eq('customer_id', req.params.id);
+
+    // Calculate statistics
+    const totalRefills = refills?.length || 0;
+    const totalSpent = sales?.reduce((sum, sale) => sum + parseFloat(sale.total_amount || 0), 0) || 0;
+    const loyaltyPoints = Math.floor(totalSpent / 100); // 1 point per Rs100 spent
+    
+    // Determine loyalty tier
+    let loyaltyTier = 'Bronze';
+    if (loyaltyPoints >= 2000) loyaltyTier = 'Platinum';
+    else if (loyaltyPoints >= 1000) loyaltyTier = 'Gold';
+    else if (loyaltyPoints >= 500) loyaltyTier = 'Silver';
+
     res.json({
       success: true,
       data: {
         ...customer,
         premises: premises || [],
-        recent_refills: refills || []
+        refillHistory: refills || [],
+        recent_refills: refills || [],
+        totalRefills,
+        total_refills: totalRefills,
+        totalSpent,
+        total_spent: totalSpent,
+        loyaltyPoints,
+        loyalty_points: loyaltyPoints,
+        loyaltyTier,
+        loyalty_tier: loyaltyTier,
+        creditLimit: 0,
+        credit_limit: 0,
+        currentCredit: 0,
+        current_credit: 0,
       }
     });
   } catch (error) {

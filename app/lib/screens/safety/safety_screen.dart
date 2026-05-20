@@ -83,6 +83,10 @@ class _SafetyScreenState extends State<SafetyScreen> with SingleTickerProviderSt
         title: Text('Safety & Compliance'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
           tabs: [
             Tab(text: 'Incidents', icon: Icon(Icons.warning)),
             Tab(text: 'Checklists', icon: Icon(Icons.checklist)),

@@ -114,7 +114,6 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
     final salesReport = _dashboardData['salesReport'] as Map<String, dynamic>? ?? {};
     final salesSummary = salesReport['summary'] as Map<String, dynamic>? ?? {};
     final customerAnalytics = _dashboardData['customerAnalytics'] as Map<String, dynamic>? ?? {};
-    final customerOverview = customerAnalytics['overview'] as Map<String, dynamic>? ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +150,7 @@ class _LPGDashboardScreenState extends State<LPGDashboardScreen> {
             Expanded(
               child: _buildMetricCard(
                 'Customers',
-                '${customerOverview['totalCustomers'] ?? 0}',
+                '${customerAnalytics['totalCustomers'] ?? 0}',
                 Icons.people,
                 LPGColors.info,
               ),

@@ -85,6 +85,10 @@ class _ProductsScreenState extends State<ProductsScreen> with SingleTickerProvid
         title: Text('Products & Inventory'),
         bottom: TabBar(
           controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          indicatorWeight: 3,
           tabs: [
             Tab(text: 'All Products'),
             Tab(text: 'Cylinders'),

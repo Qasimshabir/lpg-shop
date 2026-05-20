@@ -162,10 +162,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildCustomerStats() {
-    final overview = _customerAnalytics['overview'] ?? {};
-    final totalCustomers = overview['totalCustomers'] ?? 0;
-    final activeCustomers = overview['activeCustomers'] ?? 0;
-    final dueForRefill = overview['dueForRefill'] ?? 0;
+    final totalCustomers = _customerAnalytics['totalCustomers'] ?? 0;
+    final activeCustomers = _customerAnalytics['activeCustomers'] ?? 0;
+    
+    // Calculate due for refill (this would need a separate endpoint or calculation)
+    final dueForRefill = 0; // TODO: Implement this calculation
 
     return Card(
       child: Padding(

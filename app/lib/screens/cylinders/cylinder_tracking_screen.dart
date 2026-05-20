@@ -139,6 +139,13 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
   }
 
   Widget _buildStatBox(String label, int count, Color color) {
+    // Use a darker color for text if the background color is too light
+    Color textColor = color;
+    if (label == 'Empty') {
+      // For empty cylinders, use a darker gray for better visibility
+      textColor = LPGColors.textSecondary;
+    }
+    
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -151,7 +158,7 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
           Text(
             count.toString(),
             style: LPGTextStyles.heading2.copyWith(
-              color: color,
+              color: textColor,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -242,6 +249,13 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
   }
 
   Widget _buildMiniStat(String label, int count, Color color) {
+    // Use a darker color for text if the background color is too light
+    Color textColor = color;
+    if (label == 'Empty') {
+      // For empty cylinders, use a darker gray for better visibility
+      textColor = LPGColors.textSecondary;
+    }
+    
     return Container(
       padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
@@ -253,7 +267,7 @@ class _CylinderTrackingScreenState extends State<CylinderTrackingScreen> {
           Text(
             count.toString(),
             style: LPGTextStyles.subtitle1.copyWith(
-              color: color,
+              color: textColor,
               fontWeight: FontWeight.bold,
             ),
           ),

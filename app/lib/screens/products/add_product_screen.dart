@@ -35,8 +35,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
   final _stockController = TextEditingController();
   final _minStockController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _depositAmountController = TextEditingController();
-  final _refillPriceController = TextEditingController();
+  final _depositAmountController = TextEditingController(text: '0');
+  final _refillPriceController = TextEditingController(text: '0');
 
   // Form values
   String _productType = 'cylinder';
@@ -229,8 +229,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
       if (_productType == 'cylinder') {
         productData['cylinderType'] = _cylinderType!;
         productData['capacity'] = _capacity!;
-        productData['depositAmount'] = double.parse(_depositAmountController.text);
-        productData['refillPrice'] = double.parse(_refillPriceController.text);
+        productData['depositAmount'] = _depositAmountController.text.isEmpty 
+            ? 0.0 
+            : double.parse(_depositAmountController.text);
+        productData['refillPrice'] = _refillPriceController.text.isEmpty 
+            ? 0.0 
+            : double.parse(_refillPriceController.text);
         productData['cylinderStates'] = {
           'empty': int.parse(_emptyController.text),
           'filled': int.parse(_filledController.text),
@@ -606,6 +610,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixText: 'Rs ',
                 ),
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return null; // Optional field
+                  if (double.tryParse(value!) == null) return 'Invalid number';
+                  return null;
+                },
               ),
               SizedBox(height: 16),
               TextFormField(
@@ -615,6 +624,11 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   prefixText: 'Rs ',
                 ),
                 keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value?.isEmpty ?? true) return null; // Optional field
+                  if (double.tryParse(value!) == null) return 'Invalid number';
+                  return null;
+                },
               ),
             ],
           ],

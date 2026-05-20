@@ -1,0 +1,126 @@
+@startuml LPG Management System - Domain Model
+
+' ============================================
+' DOMAIN ENTITIES
+' ============================================
+
+entity User {
+  * id : String <<PK>>
+  --
+  * name : String
+  * email : String <<unique>>
+  * shopName : String
+  * phone : String <<unique>>
+  role : String
+  address : String
+  city : String
+  isActive : Boolean
+  createdAt : DateTime
+}
+
+entity LPGProduct {
+  * id : String <<PK>>
+  * userId : String <<FK>>
+  --
+  * name : String
+  * brand : String
+  * category : String
+  * productType : String
+  * price : Number
+  cylinderType : String
+  stock : Number
+  minStock : Number
+  cylinderStates : JSON
+  isActive : Boolean
+  createdAt : DateTime
+}
+
+entity LPGCustomer {
+  * id : String <<PK>>
+  * userId : String <<FK>>
+  --
+  * name : String
+  * phone : String
+  customerType : String
+  email : String
+  premises : JSON
+  loyaltyPoints : Number
+  totalSpent : Number
+  creditLimit : Number
+  currentCredit : Number
+  isActive : Boolean
+  createdAt : DateTime
+}
+
+entity LPGSale {
+  * id : String <<PK>>
+  * invoiceNumber : String <<unique>>
+  * soldBy : String <<FK>>
+  --
+  customer : String <<FK>>
+  items : JSON
+  subtotal : Number
+  total : Number
+  paymentMethod : String
+  paymentStatus : String
+  deliveryStatus : String
+  deliveryAddress : String
+  status : String
+  createdAt : DateTime
+}
+
+entity Feedback {
+  * id : String <<PK>>
+  * userId : String <<FK>>
+  --
+  * category : String
+  * title : String
+  * message : String
+  status : String
+  priority : String
+  adminResponse : String
+  createdAt : DateTime
+}
+
+' ============================================
+' RELATIONSHIPS
+' ============================================
+
+User ||--o{ LPGProduct : "owns"
+User ||--o{ LPGCustomer : "manages"
+User ||--o{ LPGSale : "creates"
+User ||--o{ Feedback : "submits"
+
+LPGCustomer ||--o{ LPGSale : "purchases"
+LPGProduct ||--o{ LPGSale : "sold in"
+
+' ============================================
+' NOTES
+' ============================================
+
+note right of User
+  Shop owner/manager who
+  manages the LPG business
+end note
+
+note right of LPGProduct
+  LPG cylinders and accessories
+  with inventory tracking
+end note
+
+note right of LPGCustomer
+  Customers with loyalty points,
+  credit limits, and premises
+end note
+
+note right of LPGSale
+  Sales transactions with
+  payment and delivery tracking
+end note
+
+note right of Feedback
+  User feedback and
+  support requests
+end note
+
+@enduml

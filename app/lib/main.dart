@@ -22,16 +22,70 @@ void main() async {
   runApp(const LPGDealerApp());
 }
 
-class LPGDealerApp extends StatelessWidget {
+class LPGDealerApp extends StatefulWidget {
   const LPGDealerApp({super.key});
+
+  @override
+  State<LPGDealerApp> createState() => _LPGDealerAppState();
+}
+
+class _LPGDealerAppState extends State<LPGDealerApp> {
+  String _currentTheme = 'Light';
+  String _currentLanguage = 'English';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  void _loadSettings() {
+    setState(() {
+      _currentTheme = SettingsService.getTheme();
+      _currentLanguage = SettingsService.getLanguage();
+    });
+  }
+
+  ThemeData _getThemeData() {
+    switch (_currentTheme) {
+      case 'Dark':
+        return lpgTheme().copyWith(
+          brightness: Brightness.dark,
+          scaffoldBackgroundColor: Color(0xFF121212),
+          cardTheme: CardThemeData(
+            color: Color(0xFF1E1E1E),
+            shadowColor: Colors.black.withOpacity(0.3),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          appBarTheme: AppBarTheme(
+            backgroundColor: Color(0xFF1E1E1E),
+            foregroundColor: Colors.white,
+            elevation: 2,
+          ),
+        );
+      case 'System':
+        // Use system theme
+        final brightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+        return brightness == Brightness.dark ? _getThemeData() : lpgTheme();
+      default:
+        return lpgTheme();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LPG Dealer Management System',
-      theme: lpgTheme(),
+      theme: _getThemeData(),
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
+      // Add a way to rebuild the app when settings change
+      builder: (context, child) {
+        return child ?? SizedBox.shrink();
+      },
     );
   }
 }

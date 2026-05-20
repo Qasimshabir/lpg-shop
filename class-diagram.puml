@@ -1,0 +1,93 @@
+@startuml LPG Management System
+
+class User {
+  - id: String
+  - name: String
+  - email: String
+  - shopName: String
+  - phone: String
+  - role: String
+  - isActive: Boolean
+  
+  + login(identifier, password)
+  + register(userData)
+  + updateProfile(data)
+  + matchPassword(password)
+}
+
+class LPGProduct {
+  - id: String
+  - name: String
+  - brand: String
+  - category: String
+  - productType: String
+  - cylinderStates: Object
+  - price: Number
+  - stock: Number
+  - isActive: Boolean
+  
+  + create(productData)
+  + update(id, data)
+  + updateCylinderState(state, qty)
+  + exchangeCylinder(qty)
+  + getLowStock()
+}
+
+class LPGCustomer {
+  - id: String
+  - name: String
+  - phone: String
+  - customerType: String
+  - premises: Array
+  - loyaltyPoints: Number
+  - totalSpent: Number
+  - creditLimit: Number
+  - isActive: Boolean
+  
+  + create(customerData)
+  + update(id, data)
+  + addPremises(data)
+  + addRefillRecord(data)
+  + updateCredit(amount, operation)
+  + getTopCustomers()
+}
+
+class LPGSale {
+  - id: String
+  - invoiceNumber: String
+  - customer: ObjectId
+  - items: Array
+  - total: Number
+  - paymentMethod: String
+  - paymentStatus: String
+  - deliveryStatus: String
+  - status: String
+  
+  + create(saleData)
+  + addPayment(method, amount)
+  + scheduleDelivery(date, time)
+  + updateDeliveryStatus(status)
+  + getSalesByDateRange(start, end)
+}
+
+class Feedback {
+  - id: String
+  - category: String
+  - title: String
+  - message: String
+  - status: String
+  - priority: String
+  
+  + submit(feedbackData)
+  + getMyFeedbacks()
+  + delete(id)
+}
+
+User "1" -- "0..*" LPGProduct : owns
+User "1" -- "0..*" LPGCustomer : manages
+User "1" -- "0..*" LPGSale : creates
+User "1" -- "0..*" Feedback : submits
+LPGCustomer "1" -- "0..*" LPGSale : purchases
+LPGProduct "1" -- "0..*" LPGSale : sold in
+
+@enduml

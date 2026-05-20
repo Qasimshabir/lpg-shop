@@ -146,11 +146,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   SizedBox(height: 16),
                   _buildPricingCard(),
                   SizedBox(height: 16),
-                  if (_product.productType == 'cylinder') ...[
+                  if (_product.productType.toLowerCase() == 'cylinder') ...[
                     _buildCylinderStatesCard(),
                     SizedBox(height: 16),
                     _buildCylinderActionsCard(),
-                  ] else
+                    SizedBox(height: 16),
+                  ],
+                  if (_product.productType.toLowerCase() != 'cylinder')
                     _buildStockCard(),
                 ],
               ),

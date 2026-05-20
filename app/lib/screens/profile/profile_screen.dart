@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../widgets/app_drawer.dart';
 import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -255,6 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+      drawer: AppDrawer(currentRoute: '/profile'),
       body: isLoading
         ? const Center(child: CircularProgressIndicator())
         : user == null
