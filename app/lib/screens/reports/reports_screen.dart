@@ -375,24 +375,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _generateDailyReport() async {
     final today = DateTime.now();
-    final startDate = DateTime(today.year, today.month, today.day).toIso8601String();
-    final endDate = DateTime(today.year, today.month, today.day, 23, 59, 59).toIso8601String();
+    // Use date-only format (YYYY-MM-DD) instead of full ISO string
+    final startDate = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final endDate = startDate; // Same day for daily report
     
     await _showReportDetails('Daily Report', startDate, endDate);
   }
 
   Future<void> _generateWeeklyReport() async {
     final today = DateTime.now();
-    final startDate = today.subtract(Duration(days: 7)).toIso8601String();
-    final endDate = today.toIso8601String();
+    final weekAgo = today.subtract(Duration(days: 7));
+    // Use date-only format (YYYY-MM-DD)
+    final startDate = '${weekAgo.year}-${weekAgo.month.toString().padLeft(2, '0')}-${weekAgo.day.toString().padLeft(2, '0')}';
+    final endDate = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     
     await _showReportDetails('Weekly Report', startDate, endDate);
   }
 
   Future<void> _generateMonthlyReport() async {
     final today = DateTime.now();
-    final startDate = today.subtract(Duration(days: 30)).toIso8601String();
-    final endDate = today.toIso8601String();
+    final monthAgo = today.subtract(Duration(days: 30));
+    // Use date-only format (YYYY-MM-DD)
+    final startDate = '${monthAgo.year}-${monthAgo.month.toString().padLeft(2, '0')}-${monthAgo.day.toString().padLeft(2, '0')}';
+    final endDate = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
     
     await _showReportDetails('Monthly Report', startDate, endDate);
   }
@@ -460,10 +465,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
               onPressed: startDate != null && endDate != null
                   ? () {
                       Navigator.pop(context);
+                      // Format dates as YYYY-MM-DD
+                      final startDateStr = '${startDate!.year}-${startDate!.month.toString().padLeft(2, '0')}-${startDate!.day.toString().padLeft(2, '0')}';
+                      final endDateStr = '${endDate!.year}-${endDate!.month.toString().padLeft(2, '0')}-${endDate!.day.toString().padLeft(2, '0')}';
                       _showReportDetails(
                         'Custom Report',
-                        startDate!.toIso8601String(),
-                        endDate!.toIso8601String(),
+                        startDateStr,
+                        endDateStr,
                       );
                     }
                   : null,
