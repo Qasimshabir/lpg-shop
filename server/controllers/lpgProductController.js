@@ -87,6 +87,15 @@ const createLPGProduct = async (req, res, next) => {
   try {
     const supabase = getSupabaseClient();
     
+    // Debug: Log what we're receiving
+    console.log('=== CREATE PRODUCT DEBUG ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    console.log('costPrice:', req.body.costPrice);
+    console.log('depositAmount:', req.body.depositAmount);
+    console.log('refillPrice:', req.body.refillPrice);
+    console.log('cylinderType:', req.body.cylinderType);
+    console.log('capacity:', req.body.capacity);
+    
     // Handle brand_id - if it's a string (brand name) or invalid UUID, set to null
     let brandId = null;
     if (req.body.brand_id) {
@@ -132,6 +141,8 @@ const createLPGProduct = async (req, res, next) => {
       certification_number: req.body.certificationNumber || null,
       is_active: req.body.isActive !== undefined ? req.body.isActive : true
     };
+    
+    console.log('Product data to insert:', JSON.stringify(productData, null, 2));
 
     // Handle cylinder states if provided
     if (req.body.cylinderStates) {

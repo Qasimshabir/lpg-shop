@@ -146,23 +146,35 @@ class LPGApiService {
   }
 
   static Future<LPGProduct> createLPGProduct(Map<String, dynamic> productData) async {
-    final snakeCaseData = _toSnakeCase(productData);
+    // Debug: Log what we're sending
+    AppLogger.debug('Creating product with data: $productData');
+    
+    // Don't convert to snake_case - backend expects camelCase for these fields
     final response = await http.post(
       Uri.parse('$_baseUrl/products'),
       headers: await _getHeaders(),
-      body: json.encode(snakeCaseData),
+      body: json.encode(productData),
     );
+    
+    AppLogger.debug('Create product response: ${response.statusCode} - ${response.body}');
+    
     final data = _handleResponse(response);
     return LPGProduct.fromJson(data['data']);
   }
 
   static Future<LPGProduct> updateLPGProduct(String id, Map<String, dynamic> productData) async {
-    final snakeCaseData = _toSnakeCase(productData);
+    // Debug: Log what we're sending
+    AppLogger.debug('Updating product $id with data: $productData');
+    
+    // Don't convert to snake_case - backend expects camelCase for these fields
     final response = await http.put(
       Uri.parse('$_baseUrl/products/$id'),
       headers: await _getHeaders(),
-      body: json.encode(snakeCaseData),
+      body: json.encode(productData),
     );
+    
+    AppLogger.debug('Update product response: ${response.statusCode} - ${response.body}');
+    
     final data = _handleResponse(response);
     return LPGProduct.fromJson(data['data']);
   }
