@@ -532,15 +532,16 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
     if (widget.product.productType.toLowerCase() == 'cylinder') {
       return widget.product.availableCylinders;
     }
-    return widget.product.stockQuantity;
+    return widget.product.stock;
   }
 
   @override
   Widget build(BuildContext context) {
-    final quantity = int.tryParse(_quantityController.text) ?? 1;
+    final quantity = int.tryParse(_quantityController.text) ?? 0;
     final subtotal = quantity * _unitPrice;
     final hasStock = _availableStock > 0;
     final exceedsStock = quantity > _availableStock;
+    final isInvalidQuantity = quantity <= 0;
 
     return AlertDialog(
       title: Text('Add to Cart'),
@@ -600,8 +601,11 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
                   return 'Please enter quantity';
                 }
                 final qty = int.tryParse(value);
-                if (qty == null || qty <= 0) {
-                  return 'Please enter a valid quantity';
+                if (qty == null) {
+                  return 'Please enter a valid number';
+                }
+                if (qty <= 0) {
+                  return 'Quantity must be greater than 0';
                 }
                 if (qty > _availableStock) {
                   return 'Exceeds available stock ($_availableStock)';
@@ -610,8 +614,12 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
               },
               onChanged: (value) {
                 setState(() {
-                  final qty = int.tryParse(value) ?? 0;
-                  if (qty > _availableStock) {
+                  final qty = int.tryParse(value);
+                  if (qty == null) {
+                    _quantityError = 'Invalid number';
+                  } else if (qty <= 0) {
+                    _quantityError = 'Must be greater than 0';
+                  } else if (qty > _availableStock) {
                     _quantityError = 'Exceeds available stock';
                   } else {
                     _quantityError = null;
@@ -640,12 +648,12 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: exceedsStock 
+                color: (exceedsStock || isInvalidQuantity)
                     ? LPGColors.error.withOpacity(0.1)
                     : LPGColors.success.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: exceedsStock 
+                  color: (exceedsStock || isInvalidQuantity)
                       ? LPGColors.error.withOpacity(0.3)
                       : LPGColors.success.withOpacity(0.3),
                 ),
@@ -657,7 +665,7 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
                   Text(
                     'Rs${subtotal.toStringAsFixed(2)}', 
                     style: LPGTextStyles.subtitle1.copyWith(
-                      color: exceedsStock ? LPGColors.error : LPGColors.success,
+                      color: (exceedsStock || isInvalidQuantity) ? LPGColors.error : LPGColors.success,
                     ),
                   ),
                 ],
@@ -688,13 +696,38 @@ class _AddToCartDialogState extends State<_AddToCartDialog> {
                 ),
               ),
             ],
+            if (isInvalidQuantity) ...[
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: LPGColors.error.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error, size: 16, color: LPGColors.error),
+                    SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Quantity must be greater than 0!',
+                        style: LPGTextStyles.caption.copyWith(
+                          color: LPGColors.error,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
         ElevatedButton(
-          onPressed: exceedsStock || !hasStock ? null : () {
+          onPressed: (exceedsStock || !hasStock || isInvalidQuantity) ? null : () {
             if (_formKey.currentState!.validate()) {
               Navigator.pop(context, {
                 'product': widget.product.id,

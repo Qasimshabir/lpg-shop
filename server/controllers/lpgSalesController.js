@@ -16,6 +16,38 @@ const createLPGSale = async (req, res, next) => {
       });
     }
     
+    // Validate item quantities and prices
+    const validationErrors = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      if (!item.product_id) {
+        validationErrors.push(`Item ${i + 1}: Product ID is required`);
+      }
+      
+      if (!item.quantity || typeof item.quantity !== 'number') {
+        validationErrors.push(`Item ${i + 1}: Valid quantity is required`);
+      } else if (item.quantity <= 0) {
+        validationErrors.push(`Item ${i + 1}: Quantity must be greater than 0`);
+      } else if (!Number.isInteger(item.quantity)) {
+        validationErrors.push(`Item ${i + 1}: Quantity must be a whole number`);
+      }
+      
+      if (!item.unit_price || typeof item.unit_price !== 'number') {
+        validationErrors.push(`Item ${i + 1}: Valid unit price is required`);
+      } else if (item.unit_price <= 0) {
+        validationErrors.push(`Item ${i + 1}: Unit price must be greater than 0`);
+      }
+    }
+    
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors
+      });
+    }
+    
     // Validate stock availability for all items before processing
     const stockErrors = [];
     for (let item of items) {
