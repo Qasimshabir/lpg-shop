@@ -339,15 +339,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
     final status = route['status'] ?? 'planned';
     final personnel = route['delivery_personnel'];
     
-    // Get user name from nested structure
+    // Get personnel name directly from the personnel record
     String personnelName = 'Unassigned';
-    if (personnel != null) {
-      final users = personnel['users'];
-      if (users != null && users is Map) {
-        personnelName = users['name'] ?? 'Unknown';
-      } else if (users != null && users is List && users.isNotEmpty) {
-        personnelName = users[0]['name'] ?? 'Unknown';
-      }
+    if (personnel != null && personnel is Map) {
+      personnelName = personnel['name'] ?? 'Unknown';
     }
 
     Color statusColor;
@@ -488,14 +483,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
   }
 
   Widget _buildPersonnelCard(Map<String, dynamic> person) {
-    // Get user data from nested structure
-    final users = person['users'];
-    String userName = 'Unknown';
-    if (users != null && users is Map) {
-      userName = users['name'] ?? 'Unknown';
-    } else if (users != null && users is List && users.isNotEmpty) {
-      userName = users[0]['name'] ?? 'Unknown';
-    }
+    // Get name directly from personnel record
+    final userName = person['name'] ?? 'Unknown';
     
     final isAvailable = person['is_available'] ?? person['isAvailable'] ?? false;
     final vehicleNumber = person['vehicle_number'] ?? person['vehicleNumber'];
@@ -628,14 +617,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
             itemCount: _personnel.length,
             itemBuilder: (context, index) {
               final person = _personnel[index];
-              final users = person['users'];
-              String userName = 'Unknown';
-              if (users != null && users is Map) {
-                userName = users['name'] ?? 'Unknown';
-              } else if (users != null && users is List && users.isNotEmpty) {
-                userName = users[0]['name'] ?? 'Unknown';
-              }
-              
+              final userName = person['name'] ?? 'Unknown';
               final isAvailable = person['is_available'] ?? false;
               
               return ListTile(
@@ -847,11 +829,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                             ),
                             child: Column(
                               children: _personnel.map((person) {
-                                final users = person['users'];
-                                String userName = 'Unknown';
-                                if (users != null && users is Map) {
-                                  userName = users['name'] ?? 'Unknown';
-                                }
+                                final userName = person['name'] ?? 'Unknown';
                                 final isAvailable = person['is_available'] ?? false;
                                 
                                 return RadioListTile<String>(
@@ -1175,11 +1153,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
                   ),
                   child: Column(
                     children: _personnel.map((person) {
-                      final users = person['users'];
-                      String userName = 'Unknown';
-                      if (users != null && users is Map) {
-                        userName = users['name'] ?? 'Unknown';
-                      }
+                      final userName = person['name'] ?? 'Unknown';
                       final isAvailable = person['is_available'] ?? false;
                       
                       return RadioListTile<String>(
@@ -1319,11 +1293,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> with SingleTickerProvid
 
   // Edit personnel dialog
   void _showEditPersonnelDialog(Map<String, dynamic> person) {
-    final users = person['users'];
-    String userName = 'Unknown';
-    if (users != null && users is Map) {
-      userName = users['name'] ?? 'Unknown';
-    }
+    final userName = person['name'] ?? 'Unknown';
 
     final phoneController = TextEditingController(text: person['phone'] ?? '');
     final vehicleController = TextEditingController(text: person['vehicle_number'] ?? '');

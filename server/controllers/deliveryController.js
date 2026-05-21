@@ -9,6 +9,7 @@ const addDeliveryPersonnel = async (req, res, next) => {
     
     const personnelData = {
       user_id: req.user.id,
+      name: req.body.name, // Add name field
       vehicle_number: req.body.vehicle_number,
       license_number: req.body.license_number,
       phone: req.body.phone,
@@ -42,7 +43,7 @@ const getDeliveryPersonnel = async (req, res, next) => {
     
     let query = supabase
       .from('delivery_personnel')
-      .select('*, users(id, name, email, phone)')
+      .select('*') // Select all fields including name
       .eq('user_id', req.user.id);
 
     if (req.query.is_available !== undefined) {
@@ -165,7 +166,7 @@ const getDeliveryRoutes = async (req, res, next) => {
     
     let query = supabase
       .from('delivery_routes')
-      .select('*, delivery_personnel(id, vehicle_number, phone, is_available, users(id, name, email))')
+      .select('*, delivery_personnel(id, name, vehicle_number, phone, is_available)')
       .order('date', { ascending: false });
 
     if (req.query.status) {
