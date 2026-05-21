@@ -2,7 +2,7 @@
 import 'dart:convert';
 import 'dart:html' as html;
 
-Future<void> saveFile(String content, String fileName) async {
+Future<String> saveFile(String content, String fileName) async {
   final bytes = utf8.encode(content);
   final blob = html.Blob([bytes]);
   final url = html.Url.createObjectUrlFromBlob(blob);
@@ -10,4 +10,7 @@ Future<void> saveFile(String content, String fileName) async {
     ..setAttribute('download', fileName)
     ..click();
   html.Url.revokeObjectUrl(url);
+  
+  // Return a message for web (no file path on web)
+  return 'Downloads folder';
 }

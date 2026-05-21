@@ -619,9 +619,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final fileName = 'report_${timestamp}.txt';
       
       // Use platform-agnostic file saver
-      if (kIsWeb) {
-        await file_saver.saveFile(buffer.toString(), fileName);
-        if (mounted) {
+      final filePath = await file_saver.saveFile(buffer.toString(), fileName);
+      
+      if (mounted) {
+        if (kIsWeb) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Report downloaded successfully as $fileName'),
@@ -629,10 +630,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               duration: Duration(seconds: 3),
             ),
           );
-        }
-      } else {
-        final filePath = await file_saver.saveFile(buffer.toString(), fileName);
-        if (mounted) {
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Report exported successfully!\nSaved to: $filePath'),
